@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+
+<head>
+<meta charset='utf-8' />
+
+
+
+<link href='../lib/fullcalendar.min.css' rel='stylesheet' />
+<link href='../lib/fullcalendar.print.min.css' rel='stylesheet' media='print' />
+<link href='../scheduler.min.css' rel='stylesheet' />
+<script src='https://momentjs.com/downloads/moment.js'></script>
+<script src='../lib/jquery.min.js'></script>
+<script src='../lib/fullcalendar.min.js'></script>
+<script src='../scheduler.min.js'></script>
+
+
+
+<div class="modalWindow_container" id='modal1'>
+    <div class="modalWindow">   
+    
+    <div style='text-align:center'>
+    <div class= "modalButton" id='button_Regular'>정기예약</div>
+    <div class= "modalButton" id='button_Day' >보강예약</div>
+    <div class= "modalButton" id='button_Cancel'>취소</div>
+    
+    </div>
+    </div>
+</div>
+
+<div class="modalWindow_container" id='modal2'>
+    <div class="modalWindow">   
+    
+    <div style='text-align:center'>
+    <div class= "modalButton"id='button_Extend'>수업 연장</div>
+    <div class= "modalButton"id='button_CancelCourse' >수업 취소</div>
+    <div class= "modalButton"id='button_Cancel2'>취소</div>
+    
+    </div>
+    </div>
+</div>
+
+
+
+
+
+<?php
+    /* Displays user information and some useful messages */
+    session_start();
+
+    // Check if user is logged in using the session variable
+    if ( $_SESSION['logged_in'] != 1 ) {
+      $_SESSION['message'] = "You must log in before viewing your profile page!";
+      header("location: error.php");    
+    }
+    else {
+        
+        $userName = $_SESSION['userName'];
+        $userBranch = $_SESSION['userBranch'];
+        $userID = $_SESSION['userID'];
+        $userType = $_SESSION['userType'];
+        $userDuration = $_SESSION['userDuration'];
+        $admin = False;
+        
+        
+    }
+
+    if($userID == "administer")
+    {
+        $admin =True;
+    }
+?>
+ 
+<script>
+
+    function showModal(id, anim) {
+
+      var container = document.getElementById(id);
+      var box = container.querySelector('.modalWindow');
+
+      // inital value
+      box.style.transition = 'none';
+      if (anim == 'rotate')
+        box.style.transform = 'rotateY(-70deg)';
+      else
+        box.style.transform = 'scale(0,0)';
+
+      var ok = box.querySelector('.ok');
+
+
+      requestAnimationFrame(function() {
+
+
+        box.style.transition = 'all 0.5s ease';
+
+        if (anim == 'rotate')
+          box.style.transform = 'rotateY(0deg)';
+        else
+          box.style.transform = 'scale(1,1)';
+      });
+
+      container.style.pointerEvents = 'auto';
+      container.style.opacity = 1;
+    }
+
+    function hideModal() {
+      var container = document.querySelector('.modalWindow_container');
+      container.style.opacity = 0;
+      container.style.pointerEvents = 'none';
+    }
+    function hideSecondModal() {
+      var container = document.querySelector('#modal2');
+      container.style.opacity = 0;
+      container.style.pointerEvents = 'none';
+    }
+
+    function makeWhite(dowlist){
+        var view = $('#calendar').fullCalendar('getView');
+        var viewstart = view.start;
+        var viewend = view.end;
+        //makeWhite(dowlist,viewstart, viewend);
+        var dateforcolor = [];
+        for(var j = 0; j < dowlist.length; j++)
+        {
+                    
+            var tmp = viewstart.clone().day(dowlist[j]);
+            if( tmp.isAfter(viewstart, 'd') ){
+                dateforcolor.push(tmp.format('YYYY-MM-DD'));
+            }
+            while( tmp.isBefore(viewend) ){
+                tmp.add(7, 'days');
+                dateforcolor.push(tmp.format('YYYY-MM-DD'));
+            }
+                    
+        }
+        console.log(dateforcolor);
+        for(var i = 0; i < dateforcolor.length; i++)
+        {
+                    
+            $('.fc-day[data-date="' + dateforcolor[i] + '"]').css('background', 'white');
+        }     
+        
+
+    }
+
+    
+ 
+    
+    $(document).ready(function() {
+        var originalDate;
+        var idlist = [];
+        var dowlist = [];
+        var ownTeacherView = true;
+        var ownIDView = false;
+        var searchTeacher = false;
+        var allView = false;
+        var searchedTeacher = "";
+        
+        var userID = '<?php echo $userID; ?>';
+        var userBranch = '<?php echo $userBranch; ?>';
+        var userDuration = '<?php echo $userDuration; ?>';
+        var userName = '<?php echo $userName; ?>';
+        var mainTeacher = "none";
+        var cur_termStart;
+        var cur_termEnd;
+        var termList = [];
+
+        var day_selectStart, day_formatEnd, day_formatStart, day_teacher;
+        var event_Start, event_Teacher, event_End;
+
+        function putWaitList(selectStart,teacher)
+        {
+
+            if(teacher != mainTeacher)
+            {
+                alert("담당 선생님이 아닙니다. 관리자에게 신청해주세요.");
+                return;
+            }
+            jQuery.ajax({
+                url: "http://show981111.cafe24.com/putWaitList.php",
+                type: 'POST',
+                data: {
+                    courseTeacher : teacher,
+                    courseBranch : userBranch,
+                    userID : userID,
+                    startDate : selectStart,
+                    userDuration : userDuration,
+                    courseDay : "web"// courseDay and startTime will calculated at php
+                
+                },
+                success: function(data) {
+                    console.log(data);
+                    switch(data)
+                    {
+                        case "success":
+                            alert("성공적으로 요청하였습니다. 관리자의 승인 후 변경됩니다.")
+                            break;
+                        case "alreadyBooked":
+                            alert("빈 시간대가 아닙니다.")
+                            break;
+                        case "already":
+                            alert("이미 요청하셨습니다.")
+                            break;
+                        case "internet_fail":
+                            alert("인터넷 연결을 확인해주세요.")
+                            break;
+                        case "past":
+                            alert("오늘날짜와 시작날짜를 다시한번 확인해 주세요.")
+                            break;
+                        default:
+                            alert("실패하였습니다.")
+                            break;
+                    }   
+                },
+
+                error: function(xhr, textStatus, error){
+                    alert("인터넷 연결을 확인해주세요.")
+                    console.log(xhr.statusText);
+                    console.log(textStatus);
+                    console.log(error);
+                }
+            });
+        }
+
+        function changeDay(selectStart, formatEnd , formatStart, teacher)
+        {
+            console.log("changeDay Called");
+            if(selectStart <= formatEnd && selectStart >= formatStart)
+            {
+                console.log(mainTeacher);
+                if(mainTeacher == "none")
+                {
+                    alert("먼저 정기예약을 해주세요.")
+                    return;
+                }
+                if(teacher != mainTeacher)
+                {
+                    alert("담당선생님이 아닙니다.")
+                    return;
+                }else{
+                    var canceledList = [];
+                    jQuery.ajax({//get if there are canceled Date 
+                        url: "http://show981111.cafe24.com/getBookedList.php",
+                        type: 'POST',
+                        data: {
+                            userID : userID,
+                            option : "cancelAll"
+                        
+                        },
+                        success: function(data) {
+                            console.log(data);
+                            var output = JSON.parse(data);
+                            
+                            $.each(output, function (i, item) {
+
+                                canceledList.push({
+                                    bookedTeacher: output[i].bookedTeacher,
+                                    bookedBranch: output[i].bookedBranch,
+                                    bookedStartDate: output[i].bookedStartDate, 
+                                    bookedEndDate: output[i].bookedEndDate
+                                });
+                            })
+
+                            if(canceledList.length > 0)
+                            {
+                                console.log(canceledList);
+                                var canceledDate = canceledList[(canceledList.length - 1)]["bookedStartDate"];
+                                console.log(canceledDate);
+                                jQuery.ajax({
+                                    url: "http://show981111.cafe24.com/putNewlyDate.php",
+                                    type: 'POST',
+                                    data: {
+                                        courseTeacher : teacher,
+                                        courseBranch : userBranch,
+                                        userID : userID,
+                                        startDate : selectStart,
+                                        canceledDate : canceledDate,
+                                        userDuration : userDuration,
+                                        userName : userName
+                                    
+                                    },
+                                    success: function(data) {
+                                        console.log(data);
+                                        switch(data)
+                                        {
+                                            case "success":
+                                                alert("성공적으로 예약하였습니다.")
+                                                $("#calendar").fullCalendar('refetchEvents');
+                                                break;
+                                            case "past":
+                                                alert("오늘날짜와 시작날짜를 다시한번 확인해 주세요.")
+                                                break;
+                                            case "future":
+                                                alert("이번학기만 예약이 가능합니다.")
+                                                break;
+                                            case "timeout":
+                                                alert("예약 가능시간이 아닙니다(수업 4시간 전까지 가능합니다.)")
+                                                break;
+                                            case "isBooked":
+                                                alert("빈시간대가 아닙니다.")
+                                                break;
+                                            case "already":
+                                                alert("먼저 수업을 취소해주세요.")
+                                                break;
+                                            case "noRegular":
+                                                alert("정기예약을 먼저 해주세요.")
+                                                break;
+                                            default:
+                                                alert("실패하였습니다.")
+                                                break;
+                                        }   
+                                    },
+
+                                    error: function(xhr, textStatus, error){
+                                        alert("인터넷 연결을 확인해주세요.")
+                                        console.log(xhr.statusText);
+                                        console.log(textStatus);
+                                        console.log(error);
+                                    }
+                                });
+                            }else{
+                                alert("먼저 수업을 취소해주세요!");
+
+                            }                        
+                        },
+
+                        error: function(xhr, textStatus, error){
+                            alert("인터넷 연결을 확인해주세요.")
+                          console.log(xhr.statusText);
+                          console.log(textStatus);
+                          console.log(error);
+                        }
+                    });
+
+                }
+            }else
+            {
+                alert("예약은 이번달까지만 가능합니다!");
+                return;
+            }
+        }
+
+        function extendCourse(extendTeacher, extendStart, extendEnd)
+        {
+            jQuery.ajax({
+                url: "http://show981111.cafe24.com/extendRequest.php",
+                type: 'POST',
+                data: {
+                    extendTeacher : extendTeacher,
+                    extendBranch : userBranch,
+                    userID : userID,
+                    extendStartDate : extendStart,
+                    extendEndDate : extendEnd
+                
+                },
+                success: function(data) {
+                    console.log(data);
+                    if(data.substring(0,1) == 2)
+                    {
+                        alert("성공적으로 연장하였습니다.")
+                        $("#calendar").fullCalendar('refetchEvents');
+                    }else
+                    {
+                        switch(data)
+                        {
+                            case "timeout":
+                                alert("수업시작 4시간 전까지만 연장이 가능합니다.")
+                                break;
+                            case "notEmpty":
+                                alert("빈 시간대가 아닙니다.")
+                                break;
+                            case "unavailable":
+                                alert("연장할 수 없습니다. 수업을 먼저 취소해주세요.")
+                                break;
+                            default:
+                                alert("실패하였습니다.")
+                                break;
+                        }   
+                    }
+                },
+
+                error: function(xhr, textStatus, error){
+                    alert("인터넷 연결을 확인해주세요.")
+                    console.log(xhr.statusText);
+                    console.log(textStatus);
+                    console.log(error);
+                }
+            });
+        }
+
+        function cancelCourse(cancelTeacher, cancelStartDate, cancelEndDate)
+        {
+            console.log(cancelTeacher);
+            console.log(cancelStartDate);
+            console.log(cancelEndDate);
+            //console.log(moment().format("YYYY-MM-DD HH:mm"));
+            //var today = moment().format("YYYY-MM-DD HH:mm");
+            if(cur_termEnd < cancelStartDate )
+            {
+                alert("이번달 수업만 취소가 가능합니다");
+                return;
+            }
+            jQuery.ajax({
+                url: "http://show981111.cafe24.com/cancelCourse.php",
+                type: 'POST',
+                data: {
+                    cancelTeacher : cancelTeacher,
+                    cancelBranch : userBranch,
+                    userID : userID,
+                    startDate : cancelStartDate,
+                    endDate : cancelEndDate
+                
+                },
+                success: function(data) {
+                    console.log(data);
+                    switch(data)
+                    {
+                        case "success":
+                            alert("성공적으로 취소하였습니다.")
+                            $("#calendar").fullCalendar('refetchEvents');
+                            break;
+                        case "timeout":
+                            alert("수업시작 4시간 전까지만 취소가 가능합니다.")
+                            break;
+                        case "creditOver":
+                            alert("취소가능한 횟수를 초과하였습니다.")
+                            break;
+                        case "already":
+                            alert("이미 취소한 수업입니다.")
+                            $("#calendar").fullCalendar('refetchEvents');
+                            break;
+                        default:
+                            alert("실패하였습니다.")
+                            break;
+                    }   
+                    
+                },
+
+                error: function(xhr, textStatus, error){
+                    alert("인터넷 연결을 확인해주세요.")
+                    console.log(xhr.statusText);
+                    console.log(textStatus);
+                    console.log(error);
+                }
+            });
+        }
+
+        $("#button_Regular").click(function(){
+            hideModal();
+            clicked = "noRegular";
+            putWaitList(day_selectStart,day_teacher);
+            return;
+        });
+        $("#button_Day").click(function(){
+            hideModal();
+            clicked = "buttonDay";
+            changeDay(day_selectStart, day_formatEnd, day_formatStart, day_teacher);
+            return;
+        });
+        $("#button_Cancel").click(function(){
+            hideModal();
+            return;
+        });
+
+        $("#button_Extend").click(function(){
+            hideSecondModal();
+            extendCourse(event_Teacher, event_Start, event_End);
+            return;
+        });
+        $("#button_CancelCourse").click(function(){
+            hideSecondModal();
+            cancelCourse(event_Teacher, event_Start, event_End);
+            return;
+        });
+        $("#button_Cancel2").click(function(){
+            hideSecondModal();
+            return;
+        });
+   
+        
+        
+        
+    
+        $('#calendar').fullCalendar({
+
+
+            
+
+            resources: function(callback)
+            {
+                jQuery.ajax({
+                    url: "http://show981111.cafe24.com/getResource.php",
+                    type: 'POST',
+                    data: {
+                        userBranch:'<?php echo $userBranch; ?>',
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        var output = JSON.parse(data);
+                        var events = [];
+                        $.each(output, function (i, item) {
+
+                            events.push({
+                                title: output[i].title,
+                                id: output[i].id,
+                                eventColor : output[i].eventColor,
+                                businessHours : output[i].businessHours
+                            });
+                        })                        
+                        callback(events);
+                    },
+
+                    error: function(xhr, textStatus, error){
+                      console.log(xhr.statusText);
+                      console.log(textStatus);
+                      console.log(error);
+                    }
+                });
+            },
+
+            // 
+
+            //eventRender: function(event, element, view) {
+
+                
+            //     var Id = event.id;
+            //     var resource = event.resourceId;
+                
+            //     idlist.push(Id);
+            //     var Title = event.title;
+                
+                
+            //     var theDate = moment(event.start.format("YYYY-MM-DD HH:mm")); //start Date of event 
+            //     var checkquarter = moment(theDate).add(30, 'minutes');
+            //     var theDateForCompare = moment(event.start).format("YYYY-MM-DD HH:mm");
+                
+              
+
+                
+            // },
+            events: function(start, end, timezone, callback) {
+                
+                console.log(start.format("YYYY-MM-DD HH:mm"));
+                var option = "init";
+                var findTeacher = "";
+                if(searchTeacher)
+                {
+                    findTeacher = searchedTeacher;
+                    option = "teacher";
+                }else{
+                    makeWhite(dowlist);
+                    dowlist = [];
+                }
+                if(ownIDView)
+                {
+                    option = "own";
+                }
+                if(allView)
+                {
+                    option = "every";
+                }
+                var isMain = false;
+                var isMainTeacher;
+                jQuery.ajax({
+                    url: "http://show981111.cafe24.com/getAllBookedList.php",
+                    type: 'POST',
+                    data: {
+                        fetchStart : start.format("YYYY-MM-DD HH:mm"),
+                        fetchEnd: end.format("YYYY-MM-DD HH:mm"),
+                        userBranch:'<?php echo $userBranch; ?>',
+                        userID: '<?php echo $userID; ?>',
+                        courseTeacher: findTeacher,
+                        option : option
+                    
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        var output = JSON.parse(data);
+                        var events = [];
+                        var noMainTeacher = false;
+                        $.each(output, function (i, item) {
+
+                            events.push({
+                                title: output[i].title,
+                                resourceId: output[i].resourceId,// will be parsed
+                                start: output[i].start, // will be parsed
+                                end: output[i].end,
+                                id: output[i].id,
+                                rendering : output[i].rendering,
+                                overlap : output[i].overlap,
+                                color : output[i].color,
+                                mainTeacher : output[i].mainTeacher
+
+
+                            });
+                            console.log(output[i].mainTeacher);
+                            if(output[i].mainTeacher)
+                            {
+                                mainTeacher = output[i].mainTeacher;
+                                console.log(mainTeacher);
+                            }
+                            
+                        })
+                        callback(events);
+                    },
+
+                    error: function(xhr, textStatus, error){
+                      console.log(xhr.statusText);
+                      console.log(textStatus);
+                      console.log(error);
+                    }
+                });
+                jQuery.ajax({
+                    url: "http://show981111.cafe24.com/getTermList.php",
+                    type: 'POST',
+                    data: {
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        var output = JSON.parse(data);
+                        $.each(output, function (i, item) {
+
+                            termList.push({
+                                termStart: output[i].termStart,
+                                termEnd: output[i].termEnd,
+                            });
+
+                            if( i == 1)
+                            {
+                                cur_termStart = output[i].termStart;
+                                cur_termEnd = output[i].termEnd;
+                            }
+                        })                        
+                    },
+
+                    error: function(xhr, textStatus, error){
+                      console.log(xhr.statusText);
+                      console.log(textStatus);
+                      console.log(error);
+                    }
+                });
+            },
+
+            customButtons: {
+                myCustomButton: {
+                  text: '나의 예약',
+                  click: function() {
+
+                        ownTeacherView = false;    
+                        allView = false;
+                        searchTeacher = false;
+                        ownIDView = true;
+                        //only show my lesson
+                        $("#calendar").fullCalendar('refetchEvents');
+
+                        
+                    }
+                },
+
+                myCustomButton1: {
+                  text: '선생님 검색',
+
+                  click: function() {
+                        
+                        makeWhite(dowlist);
+                        dowlist = [];
+                        
+                        var teachername = prompt("선생님이름을 입력해주세요.");
+                        var exist = false;
+                        if(typeof teachername != 'undefined')
+                        {
+                            searchedTeacher = teachername;
+                            console.log(teachername);
+                            jQuery.ajax({
+                                url: "http://show981111.cafe24.com/getCourseTimeLine.php",
+                                type: 'POST',
+                                data: {
+                                    userBranch:'<?php echo $userBranch; ?>'
+                                },
+                                success: function(data) {
+                                    console.log(data);
+                                    var output = JSON.parse(data);
+                                    
+                                    $.each(output, function (i, item) {
+
+                                        if(searchedTeacher == output[i].courseTeacher)
+                                        {
+                                            exist = true;
+                                            console.log(exist);
+                                            if(output[i].courseDay == '월')
+                                            {
+                                                dowlist.push(1);
+                                            }
+                                            else if(output[i].courseDay == '화')
+                                            {
+                                                dowlist.push(2);
+                                            }
+                                            else if(output[i].courseDay== '수')
+                                            {
+                                                dowlist.push(3);
+                                            }
+                                            else if(output[i].courseDay == '목')
+                                            {
+                                                dowlist.push(4);
+                                            }
+                                            else if(output[i].courseDay == '금')
+                                            {
+                                                dowlist.push(5);
+                                            }
+                                            else if(output[i].courseDay== '토')
+                                            {
+                                                dowlist.push(6);
+                                            }
+                                            
+                                            allView = false;
+                                            ownTeacherView = false;
+                                            ownIDView =false;
+                                            searchTeacher = true;
+                                            searchedTeacher = teachername;
+                                           
+                                            var dateforcolor = [];
+                                            var view = $('#calendar').fullCalendar('getView');
+                                            var viewstart = view.start;
+                                            var viewend = view.end;
+
+                                            for(var j = 0; j < dowlist.length; j++)
+                                            {
+                                                
+                                                var tmp = viewstart.clone().day(dowlist[j]);
+                                                if( tmp.isAfter(viewstart, 'd') ){
+                                                    dateforcolor.push(tmp.format('YYYY-MM-DD'));
+                                                }
+                                                while( tmp.isBefore(viewend) ){
+                                                    tmp.add(7, 'days');
+                                                    dateforcolor.push(tmp.format('YYYY-MM-DD'));
+                                                }
+                                                
+                                            }
+                                            for(var i = 0; i < dateforcolor.length; i++)
+                                            {
+                                                
+                                                $('.fc-day[data-date="' + dateforcolor[i] + '"]').css('background', 'Bisque');
+                                            }
+
+                                            $("#calendar").fullCalendar('refetchEvents');
+                                                
+
+
+                                            
+                                        }
+
+                                        
+                                    })
+                                    if(!exist && teachername != null)
+                                    {
+                                        alert("선생님 이름을 다시한번 확인해주세요!");
+                                    }                        
+                                },
+
+                                error: function(xhr, textStatus, error){
+                                  console.log(xhr.statusText);
+                                  console.log(textStatus);
+                                  console.log(error);
+                                }
+                            });
+
+                        }
+                        
+                        
+                    
+                    }
+                },
+
+                myCustomButton2: {
+                  text: '전체보기',
+                  click: function() {
+                        allView = true;
+                        ownTeacherView = false;
+                        ownIDView = false;
+                        searchTeacher = false;
+                        $("#calendar").fullCalendar('refetchEvents');
+                        makeWhite(dowlist);
+                        dowlist = [];
+                    
+                    }
+                },
+
+                
+              },
+
+
+           
+
+
+
+
+
+
+
+            selectable:true,
+            selectHelper:true,
+            selectOverlap : function(event) {
+                console.log(event.rendering)
+                //console.log(event.color)
+                if(event.rendering == 'background')
+                {
+                    
+                    return false;
+                }else
+                {
+                    return true;
+                }
+            },
+
+
+            
+            eventConstraint : "businessHours",
+            selectConstraint: "businessHours",
+            select: function(start,  allDay, event, view, resource )
+            {
+                var clicked;
+                var eventstart = event.start;
+                
+                var teacher = resource.id;
+                
+                var selectStart = moment(start).format("YYYY-MM-DD HH:mm");
+                var formatStart = moment(cur_termStart).format("YYYY-MM-DD");
+                var formatEnd = moment(cur_termEnd).format("YYYY-MM-DD");
+                console.log(selectStart);
+                console.log(formatStart);
+                console.log(formatEnd);
+
+        
+                showModal('modal1', 'rotate');
+
+                day_teacher = teacher;
+                day_selectStart = selectStart;
+                day_formatStart = formatStart;
+                day_formatEnd = formatEnd;
+            }, 
+
+            eventClick:function(calEvent, jsEvent, view)
+            {
+                showModal('modal2', 'rotate');
+            
+                var openString = moment(calEvent.start).format("YYYY-MM-DD HH:mm");
+                var endString = moment(calEvent.end).format("YYYY-MM-DD HH:mm");
+                console.log(openString);
+                console.log(endString)
+                event_Teacher = calEvent.resourceId;
+                event_Start = openString;
+                event_End = endString;
+            },
+
+        
+
+
+            eventLimit: true,
+            views: {
+                month: {
+                    eventLimit: 5
+                }
+            },
+            
+
+            dayClick: function(date, jsEvent, view) {
+                var clickedDate = moment(date);
+                
+                if (view.name != "month" && view.name != "agendaWeek")
+                {
+                    console.log(view.name)
+                    return;
+                }else if (view.name == "month" || view.name == "agendaWeek") {
+                    $('#calendar').fullCalendar('changeView', 'timelineDay');
+                    $('#calendar').fullCalendar('gotoDate', clickedDate);
+                    
+                }
+
+            },
+
+
+
+            minTime: "09:00:00",
+            maxTime: "22:30:00",
+            slotDuration: '00:15:00',
+            
+            eventOverlap : false,
+            
+
+            schedulerLicenseKey: 'GPL-My-Project-Is-Open-Source',
+            
+            defaultDate: $('#calendar').fullCalendar('today'), 
+            
+            nowIndicator: true,
+            editable: '<?php echo $admin; ?>', // enable draggable events
+            aspectRatio: 1.8,
+            monthNames: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+            monthNamesShort: ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"],
+            dayNames: ["일요일","월요일","화요일","수요일","목요일","금요일","토요일"],
+            dayNamesShort: ["일","월","화 ","수 ","목 ","금 ","토 "],      ///한글로변환
+            buttonText: {
+                today : "오늘",
+                month : "월",
+                week : "주",
+                day : "예약",
+
+            },   
+            scrollTime: '09:00', // undo default 6am scrollTime
+            header: {
+                left: ' today, timelineDay,agendaWeek,month prev,next',
+                center: 'title',
+                right: 'myCustomButton2, myCustomButton1, myCustomButton' //agendaDay <-> timelineDay 
+            },
+
+
+
+         
+        
+
+
+            defaultView: 'month',
+            resourceLabelText: '강사',
+            //resources: 'resource_J.php',
+            resourceAreaWidth: "10%",
+
+          
+            
+         
+          
+
+           
+        }).on('click', '.fc-month-button', function() {
+            allView = false;
+            ownTeacherView = true;
+            ownIDView = false;
+            searchTeacher = false;
+            var dateforcolor = [];
+            var view = $('#calendar').fullCalendar('getView');
+            var viewstart = view.start;
+            var viewend = view.end;
+
+            for(var j = 0; j < dowlist.length; j++)
+            {
+                                    
+                var tmp = viewstart.clone().day(dowlist[j]);
+                if( tmp.isAfter(viewstart, 'd') ){
+                    dateforcolor.push(tmp.format('YYYY-MM-DD'));
+                }
+                while( tmp.isBefore(viewend) ){
+                    tmp.add(7, 'days');
+                    dateforcolor.push(tmp.format('YYYY-MM-DD'));
+                }
+                                    
+            }
+            for(var i = 0; i < dateforcolor.length; i++)
+            {
+                                    
+                $('.fc-day[data-date="' + dateforcolor[i] + '"]').css('background', 'Bisque');
+            }
+            $("#calendar").fullCalendar('refetchEvents');      
+            
+        });
+
+        
+
+          
+    
+    });
+
+
+
+ 
+</script>
+<style>
+    
+     .modalWindow_container {
+       perspective: 1300px;
+        position: absolute;
+        font-family: Arial, Helvetica, sans-serif;
+       width:100%;
+       height:100%;
+       top:0px;
+       left:0px;
+        pointer-events:none;
+        z-index: 99999;
+        opacity:0;
+         transition: opacity 400ms;
+         background:rgba(0,0,0,0.8);
+     }
+     
+    .modalWindow {
+        transform-origin: 50% 50%;
+        transform-style: preserve-3d;
+        height:auto;
+        box-shadow: 5px 5px 5px 5px rgba(0, 0, 0, 0.3);
+        position: absolute;
+        top:calc(50% - 100px);
+        left:calc(50% - 100px);
+        margin: auto;
+        padding: 5px 20px 13px 20px;
+        border-radius: 0px;
+        background: #fff;
+    }
+
+    /*#button_Regular {
+        padding : 10px;
+    }
+    #button_Day {
+        padding : 10px;
+    }
+    #button_Cancel {
+        padding : 10px;
+    }*/
+
+    .modalButton {
+        padding: 10px;
+    }
+
+    body {
+        margin: 0;
+        padding: 0;
+        font-family: "Lucida Grande",Helvetica,Arial,Verdana,sans-serif;
+        font-size: 17px;
+    }
+ 
+    #calendar {
+        max-width: 1500px;
+        margin: 40px auto;
+    }
+ 
+</style>
+
+
+</head>
+
+
+<body>
+    
+    
+    <div class="container">
+
+     <div id='calendar'></div>
+    </div>
+</body>
+</html>
