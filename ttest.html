@@ -407,7 +407,8 @@
                     cancelBranch : userBranch,
                     userID : userID,
                     startDate : cancelStartDate,
-                    endDate : cancelEndDate
+                    endDate : cancelEndDate,
+                    userName : userName
                 
                 },
                 success: function(data) {
@@ -519,24 +520,19 @@
 
             // 
 
-            //eventRender: function(event, element, view) {
+            eventRender: function(event, element, view) {
 
-                
-            //     var Id = event.id;
-            //     var resource = event.resourceId;
-                
-            //     idlist.push(Id);
-            //     var Title = event.title;
-                
-                
-            //     var theDate = moment(event.start.format("YYYY-MM-DD HH:mm")); //start Date of event 
-            //     var checkquarter = moment(theDate).add(30, 'minutes');
-            //     var theDateForCompare = moment(event.start).format("YYYY-MM-DD HH:mm");
-                
-              
+                var start = moment(event.start.format("YYYY-MM-DD HH:mm"));
+                var end = moment(event.end.format("YYYY-MM-DD HH:mm"));
+                var duration = end.diff(start,"minutes");
+                var durationForDisplay = "  [" + duration + "min" + "]";
 
-                
-            // },
+                if(duration != 30 && event.title != '대체수업/예약해주세요')
+                {
+                    element.find('.fc-title').append(durationForDisplay); 
+                }
+
+            },
             events: function(start, end, timezone, callback) {
                 
                 console.log(start.format("YYYY-MM-DD HH:mm"));
