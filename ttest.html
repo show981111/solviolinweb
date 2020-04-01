@@ -8,10 +8,13 @@
 <link href='../lib/fullcalendar.min.css' rel='stylesheet' />
 <link href='../lib/fullcalendar.print.min.css' rel='stylesheet' media='print' />
 <link href='../scheduler.min.css' rel='stylesheet' />
-<script src='https://momentjs.com/downloads/moment.js'></script>
+<link rel="stylesheet" href="http://code.jquery.com/ui/1.8.18/themes/base/jquery-ui.css" type="text/css" /> 
+<script src='https://momentjs.com/downloads/moment.js'></script> 
 <script src='../lib/jquery.min.js'></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.js"></script>
 <script src='../lib/fullcalendar.min.js'></script>
 <script src='../scheduler.min.js'></script>
+
 
 
 
@@ -34,6 +37,23 @@
     <div class= "modalButton"id='button_Extend'>수업 연장</div>
     <div class= "modalButton"id='button_CancelCourse' >수업 취소</div>
     <div class= "modalButton"id='button_Cancel2'>취소</div>
+    
+    </div>
+    </div>
+</div>
+
+<div class="modalWindow_container" id='modal_open'>
+    <div class="modalWindow">   
+    
+    <div style='text-align:center'>
+    <div class = "modalButton" style="display: inline-block;">시작 시간</div>
+    <div class = "modalButton" style="display: inline-block;">종료 시간</div>
+    <div></div>
+    <input class = "modalButton" type="text" id="et_start" placeholder = "00:00" value="00:00">
+    <input class = "modalButton" type="text" id="et_end" placeholder = "23:59" value="23:59">
+    <div></div>
+    <div class= "modalButton"id='button_Ok_Open' style="display: inline-block;">확인</div>
+    <div class= "modalButton"id='button_Cancel_Open' style="display: inline-block;">취소</div>
     
     </div>
     </div>
@@ -113,6 +133,13 @@
       container.style.pointerEvents = 'none';
     }
 
+    function hideOpenModal()
+    {
+        var container = document.querySelector('#modal_open');
+      container.style.opacity = 0;
+      container.style.pointerEvents = 'none';
+    }
+
     function makeWhite(dowlist){
         var view = $('#calendar').fullCalendar('getView');
         var viewstart = view.start;
@@ -165,8 +192,8 @@
         var termList = [];
 
         var day_selectStart, day_formatEnd, day_formatStart, day_teacher;
-        var event_Start, event_Teacher, event_End;
-
+        var event_Start, event_Teacher, event_End, event_Id;
+       
         function putWaitList(selectStart,teacher)
         {
 
@@ -224,7 +251,8 @@
         function changeDay(selectStart, formatEnd , formatStart, teacher)
         {
             console.log("changeDay Called");
-            if(selectStart <= formatEnd && selectStart >= formatStart)
+            console.log(formatEnd);
+            if(selectStart <= formatEnd && selectStart > formatStart)
             {
                 console.log(mainTeacher);
                 if(mainTeacher == "none")
@@ -304,6 +332,9 @@
                                             case "noRegular":
                                                 alert("정기예약을 먼저 해주세요.")
                                                 break;
+                                            case "rest":
+                                                alert("휴원기간입니다.")
+                                                break;
                                             default:
                                                 alert("실패하였습니다.")
                                                 break;
@@ -339,8 +370,12 @@
             }
         }
 
-        function extendCourse(extendTeacher, extendStart, extendEnd)
+        function extendCourse(extendTeacher, extendStart, extendEnd, selectId)
         {
+            if(selectId != userID)
+            {
+                return;
+            }
             jQuery.ajax({
                 url: "http://show981111.cafe24.com/extendRequest.php",
                 type: 'POST',
@@ -464,7 +499,7 @@
 
         $("#button_Extend").click(function(){
             hideSecondModal();
-            extendCourse(event_Teacher, event_Start, event_End);
+            extendCourse(event_Teacher, event_Start, event_End, event_Id);
             return;
         });
         $("#button_CancelCourse").click(function(){
@@ -474,6 +509,44 @@
         });
         $("#button_Cancel2").click(function(){
             hideSecondModal();
+            return;
+        });
+        $("#button_Cancel_Open").click(function(){
+            hideOpenModal();
+            return;
+        });
+        $("#button_Ok_Open").click(function(){
+            var tempS = moment(event_Start).format("YYYY-MM-DD");
+
+            var courseStart = $('#et_start').val();
+            var courseEnd = $('#et_end').val();
+
+            if(moment(courseStart, "HH:mm", true).isValid() && moment(courseEnd, "HH:mm", true).isValid()){
+
+                var finalStart = tempS + " " + courseStart;
+                var finalEnd = tempS + " " + courseEnd;
+                if( (moment(event_Start) <= moment(finalStart) && moment(finalStart) < moment(event_End) ) && 
+                    (moment(event_Start) < moment(finalEnd) && moment(finalEnd) <= moment(event_End) ) )
+                {
+                    if(mainTeacher != event_Teacher){
+                        alert("담당 선생님이 아닙니다!");
+                    }else{
+                        if(moment(finalEnd).diff(finalStart, 'minutes') != parseInt(userDuration)){
+                            console.log(moment(finalStart).diff(finalEnd, 'minutes') );
+                            alert("수강시간이 " +userDuration + "분이 아닙니다!");
+                        }else{
+                            var formatStart = moment(cur_termStart).format("YYYY-MM-DD");
+                            var formatEnd = moment(cur_termEnd).format("YYYY-MM-DD");
+                            changeDay(finalStart, formatEnd , formatStart, event_Teacher);
+                        }
+                    }
+                }else{
+                    alert("수업가능한 시간대가 아닙니다!");
+                }
+            }else{
+                alert("시간 형식을 다시한번 확인해주세요!")
+            }
+            hideOpenModal();
             return;
         });
    
@@ -836,8 +909,8 @@
 
             eventClick:function(calEvent, jsEvent, view)
             {
-                showModal('modal2', 'rotate');
-            
+                console.log(userID);
+                console.log(calEvent.title);
                 var openString = moment(calEvent.start).format("YYYY-MM-DD HH:mm");
                 var endString = moment(calEvent.end).format("YYYY-MM-DD HH:mm");
                 console.log(openString);
@@ -845,6 +918,27 @@
                 event_Teacher = calEvent.resourceId;
                 event_Start = openString;
                 event_End = endString;
+                event_Id = calEvent.title;
+                if(calEvent.title == "대체수업/예약해주세요")
+                {
+                    showModal('modal_open','rotate');
+                    return;
+                }
+                if(userID != calEvent.title)
+                {
+                    if (view.name != "month" && view.name != "agendaWeek")
+                    {
+                        console.log(view.name)
+                        return;
+                    }else if (view.name == "month" || view.name == "agendaWeek") {
+                        $('#calendar').fullCalendar('changeView', 'timelineDay');
+                        $('#calendar').fullCalendar('gotoDate', calEvent.start);
+                        
+                    }
+                    return;
+                }
+                showModal('modal2', 'rotate');
+            
             },
 
         

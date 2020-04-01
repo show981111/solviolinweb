@@ -39,6 +39,7 @@
 			$tempE;
 			$termS;
 			$termE;
+			$flag = false;
 			if($result)
 			{
 				while($row = mysqli_fetch_array($result)){
@@ -58,12 +59,14 @@
 						array_push($termList, array("termStart"=>$this->past_termStart, "termEnd"=>$this->past_termEnd ));
 						array_push($termList, array("termStart"=>$this->cur_termStart, "termEnd"=>$this->cur_termEnd ));
 						$todayIndex = $count;
+						$flag = true;
 					}
-					if( ($todayIndex + 1) == $count)
+					if( ($todayIndex + 1) == $count && $flag)
 					{
 						$this->future_termStart = $row[0];
 						$this->future_termEnd = $row[1];
 						array_push($termList, array("termStart"=>$this->future_termStart, "termEnd"=>$this->future_termEnd ));
+						break;
 					}
 					$count = $count + 1;
 				}
@@ -603,7 +606,7 @@
 			//echo $start." ";
 
 
-			$getRegular = "SELECT courseTeacher,courseBranch,userID,startTime,endTime,dow,startDate FROM REGULARSCHEDULE WHERE extendedDate <> '$start' AND status <> 'false' ";//가장 최근 정기예약 날짜 확인 
+			$getRegular = "SELECT courseTeacher,courseBranch,userID,startTime,endTime,dow,startDate FROM REGULARSCHEDULE WHERE extendedDate <> '$start' ";//가장 최근 정기예약 날짜 확인 
 			$result1 = mysqli_query($this->con,$getRegular);                                                    //이미 연장된 학생은 뺼수잇도록 
 			$addedStart= strtotime($start);
 			//$dayofweek = date('w', strtotime($startDate));
@@ -615,6 +618,7 @@
 
 			while($row = mysqli_fetch_array($result1))
 			{
+				$addedStart= strtotime($start);
 				$formatStartTime = date('H:i',strtotime($row[3]));
 				$formatEndTime = date('H:i',strtotime($row[4]));
 				//echo "//format Start ".$formatStartTime. " ". "formatEndTime ".$formatEndTime." dow".$row[5]." " .date('w', $addedStart) ." //";
@@ -723,15 +727,31 @@
 				echo "past";
 				return;
 			}
+			$this->getTermList("no");
+			
+			$getStatus = "SELECT status FROM USER WHERE userID = '$userID' ";
+			$getquery = mysqli_query($this->con, $getStatus);
+			while($status = mysqli_fetch_array($getquery) )
+			{
+				if($status[0] == "false")
+				{
+					echo "fail";
+					return;
+				}
+			}
 
-			$findNow = "SELECT startTime, endTime, dow FROM REGULARSCHEDULE WHERE userID = 'userID' AND courseTeacher = '$courseTeacher' AND courseBranch = '$courseBranch' ";
+			$findNow = "SELECT startTime, endTime FROM REGULARSCHEDULE WHERE courseTeacher = '$courseTeacher' AND courseBranch = '$courseBranch' AND dow = '$dow' ";
 
 			$NowRes = mysqli_query($this->con,$findNow);
-			if(mysqli_num_rows ( $NowRes ) > 0)
+			while($NowRow = mysqli_fetch_array($NowRes))
 			{
-				$response = "alreadyBooked";
-				echo $response;
-				return 0;
+				if( (strtotime($NowRow[0]) <= strtotime($startTime) && strtotime($startTime) < strtotime($NowRow[1])) || 
+					(strtotime($NowRow[0]) <= strtotime($endTime) && strtotime($endTime) <= strtotime($NowRow[1])) )
+				{
+					$response = "alreadyBooked";
+					echo $response;
+					return 0;
+				}
 
 			}
 
@@ -954,7 +974,7 @@
 			//echo "candidate DATETIME".$cand_StartDateTime ."//";
 			if(strtotime($cand_StartDateTime) > strtotime($endChangeDate))//다음학기의 예약인 경우 
 			{
-				$selectSame = "SELECT * FROM REGULARSCHEDULE WHERE courseTeacher = '$pt_courseTeacher'AND courseBranch = '$pt_courseBranch'AND startTime = '$startTime'AND endTime = '$endTime'AND dow = '$dow' AND  status <> 'false' ";
+				$selectSame = "SELECT * FROM REGULARSCHEDULE WHERE courseTeacher = '$pt_courseTeacher'AND courseBranch = '$pt_courseBranch'AND startTime = '$startTime'AND endTime = '$endTime'AND dow = '$dow'  ";
 				$sameRes = mysqli_query($this->con,$selectSame);
 				if(mysqli_num_rows ( $sameRes ) > 0)
 				{
@@ -1010,6 +1030,17 @@
 			$r_courseBranch = $courseBranch;
 			if( $userName != "admin")
 			{
+				
+				$getStatus = "SELECT status FROM USER WHERE userID = '$userID' ";
+				$getquery = mysqli_query($this->con, $getStatus);
+				while($status = mysqli_fetch_array($getquery) )
+				{
+					if($status[0] == "false")
+					{
+						echo "fail";
+						return;
+					}
+				}
 				if( strtotime($this->today) > strtotime($startDate) )
 				{
 					echo "past";
@@ -1032,12 +1063,12 @@
 						return;
 					}
 				}
-				if(strtotime($this->future_termStart) <= strtotime($startDate))
+				if(strtotime($this->future_termStart) < strtotime($startDate))
 				{
 					echo "future";
 					return;
 				}
-				
+
 				$getDataFromR = "SELECT courseBranch,courseTeacher FROM REGULARSCHEDULE WHERE userID = '$userID' ";
 				$res_getDataFromR = mysqli_query($this->con,$getDataFromR);
 				if(mysqli_num_rows($res_getDataFromR ) > 0)
@@ -1565,7 +1596,7 @@
 		{
 			if($this->filterTeacherBranch("전체", $teacherBranch) != "success")
 			{
-				return; 
+				return;
 			} 
 			$delete = "DELETE FROM TEACHERLIST WHERE Teacher = '$teacherName'AND Branch = '$teacherBranch'";
 			$deletequery = mysqli_query($this->con, $delete);
@@ -1578,9 +1609,25 @@
 			return;
 		}
 
-		function setUserCredit($time)
+		function deleteStudent($userID)//regularschedule 삭제
 		{
-			$query = "CREATE EVENT `setCredit` ON SCHEDULE AT '$ti' ON COMPLETION NOT PRESERVE ENABLE DO UPDATE USER SET userCredit = 5 WHERE userName = 'admin' ";
+			$deleteRegular = "DELETE FROM REGULARSCHEDULE WHERE userID = '$userID' ";
+			$deleteQuery = mysqli_query($this->con,$deleteRegular);
+
+			if( mysqli_affected_rows($this->con) > 0)
+			{
+				$updateStatus = "UPDATE USER SET status = 'false' WHERE userID = '$userID' ";
+				$updateQuery = mysqli_query($this->con,$updateStatus);
+				if(mysqli_affected_rows($this->con) > 0)
+				{
+					echo "success";
+				}else{
+					echo "fail";
+				}
+			}else{
+				echo "fail";
+			}
+			return;
 		}
 
 		

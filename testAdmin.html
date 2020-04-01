@@ -1371,6 +1371,8 @@ jQuery.browser = {};
                                 if(userInfo.length <= 0)
                                 {
                                     alert("해당하는 유저가 없습니다!");
+                                }else{
+                                    alert(userInfo[0].userID);
                                 }
                                 console.log(userName)
                                 console.log(userID)
@@ -1474,52 +1476,55 @@ jQuery.browser = {};
                         var checkalert = confirm("원비 푸쉬를 띄우시겠습니까?");
                         if(checkalert)
                         {
+                            var checktwice = confirm("진짜?");
+                            if(checktwice)
+                            {
+                                var payStatus = "unpaid";
+                                
+                                $.ajax({
 
-                            var payStatus = "unpaid";
-                            
-                            $.ajax({
-
-                                url:"http://show981111.cafe24.com/fullcalendar-scheduler-1.9.4/login-system/updatepaystatus.php",
-                                type:"POST",
-                                data:{payStatus: payStatus},
-                                                                   
-                                success:function(data)
-                                {
-                                    console.log(data);
-                                    $("#calendar").fullCalendar('refetchEvents');
-                                    var data  = $.parseJSON(data);
-                                    if( data.status == 'error')
+                                    url:"http://show981111.cafe24.com/fullcalendar-scheduler-1.9.4/login-system/updatepaystatus.php",
+                                    type:"POST",
+                                    data:{payStatus: payStatus},
+                                                                       
+                                    success:function(data)
                                     {
-                                        alert("ERROR.");
-                                    }
-                                    else{
-                                        alert("alerted Successfully");
-                                        var ok = 'ok';
-                            
-                                        $.ajax({
+                                        console.log(data);
+                                        $("#calendar").fullCalendar('refetchEvents');
+                                        var data  = $.parseJSON(data);
+                                        if( data.status == 'error')
+                                        {
+                                            alert("ERROR.");
+                                        }
+                                        else{
+                                            alert("alerted Successfully");
+                                            var ok = 'ok';
+                                
+                                            $.ajax({
 
-                                            url:"http://show981111.cafe24.com/fullcalendar-scheduler-1.9.4/login-system/initializeincome.php",
-                                            type:"POST",
-                                            data:{ok : ok},
-                                                                               
-                                            success:function(data)
-                                            {
-                                                console.log(data);
-                                                if(data.status == 'success')
+                                                url:"http://show981111.cafe24.com/fullcalendar-scheduler-1.9.4/login-system/initializeincome.php",
+                                                type:"POST",
+                                                data:{ok : ok},
+                                                                                   
+                                                success:function(data)
                                                 {
-                                                    alert("initialized Successfully");
-                                                }else
-                                                {
-                                                    alert("ERROR.");
-                                                }                   
-                                                                                    
-                                                                                    
-                                            }
-                                        });
-                                                       
-                                    }                     
-                                }
-                            });
+                                                    console.log(data);
+                                                    if(data.status == 'success')
+                                                    {
+                                                        alert("initialized Successfully");
+                                                    }else
+                                                    {
+                                                        alert("ERROR.");
+                                                    }                   
+                                                                                        
+                                                                                        
+                                                }
+                                            });
+                                                           
+                                        }                     
+                                    }
+                                });
+                            }
 
                         }else
                         {
@@ -1589,6 +1594,53 @@ jQuery.browser = {};
                     text: "선생님 등록/제거",
                     click: function(){
                         showModal('modal_Teacher','rotate');                                
+                    }
+                  },
+
+                  button_quitStudent : {
+                    text: "학생 비활성화",
+                    click: function(){
+                        var deleteUser = prompt("학생아이디를 입력해주세요.");
+                        if(deleteUser)
+                        {
+                            $.ajax({
+                                url:"http://show981111.cafe24.com/deleteStudent.php",
+                                type:"POST",
+                                data:{userID: deleteUser},
+                                                                   
+                                success:function(data)
+                                {
+                                    console.log(data);
+                                    if(data == "success"){
+                                        alert("성공적으로 삭제하였습니다.");
+                                    }else{
+                                        alert("실패하였습니다. 아이디를 다시한번 확인해주세요.");
+                                    }                              
+                                }
+                            });
+                        }                          
+                    }
+                  },
+                  button_resetCredit : {
+                    text: "크레딧 초기화",
+                    click: function(){
+                        var checkalert = confirm("크레딧을 초기화 하시겟습니까?");
+                        if(checkalert)
+                        {
+                            $.ajax({
+                                url:"http://show981111.cafe24.com/resetCredit.php",
+                                type:"POST",                   
+                                success:function(data)
+                                {
+                                    console.log(data);
+                                    if(data == "success"){
+                                        alert("성공적으로 초기화했습니다.");
+                                    }else{
+                                        alert("실패하였습니다.");
+                                    }                              
+                                }
+                            });
+                        }                          
                     }
                   }
                 
@@ -1714,7 +1766,7 @@ jQuery.browser = {};
             },
 
             footer: {
-                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo',
+                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo, button_quitStudent, button_resetCredit',
                 left : 'myCustomButton_pushUp'
             },
 
