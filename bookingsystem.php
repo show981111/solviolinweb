@@ -511,7 +511,7 @@
 					$query = "SELECT courseTeacher,courseBranch,startDate,endDate,status FROM BOOKEDLIST WHERE userID = '$userID' AND (status = 'canceled' OR status = 'closeCanceled') order by UNIX_TIMESTAMP(startDate) DESC ";//이번학기 지난학기 취소한 수업을 알기위한 쿼리
 				}else if($option == "changeRes")
 				{
-					$query = "SELECT A.courseTeacher,A.courseBranch,A.startDate,A.endDate,A.changeFrom,A.status FROM BOOKEDLIST A LEFT JOIN BOOKEDLIST B ON A.changeFrom = B.startDate WHERE A.userID = '$userID' AND ( A.status <> 'changeDone' AND A.status <> 'extending')  order by UNIX_TIMESTAMP(A.startDate) DESC ";//
+					$query = "SELECT A.courseTeacher,A.courseBranch,A.startDate,A.endDate,A.changeFrom,A.status FROM BOOKEDLIST A LEFT JOIN BOOKEDLIST B ON A.changeFrom = B.startDate AND A.userID = B.userID WHERE A.userID = '$userID' AND ( A.status <> 'changeDone' AND A.status <> 'extending')  order by UNIX_TIMESTAMP(A.startDate) DESC ";//
 				}
 				else
 				{
@@ -534,7 +534,15 @@
 							{	
 								if($option == "changeRes")
 								{
-									array_push($response, array("bookedTeacher"=>$row[0], "bookedBranch"=>$row[1], "bookedStartDate"=>$row[2], "bookedEndDate" => $row[4],"status"=>$row[5] ));
+									if($row[5] == "BOOKED" && ($row[4] == "" || $row[4] == "admin"))
+									{
+										continue;
+									}
+									array_push($response, array("bookedTeacher"=>$row[0], "bookedBranch"=>$row[1], "bookedStartDate"=>$row[2], "bookedEndDate" => $row[4],"status"=>$row[5]));
+									if($row[5] == "canceled" && $row[4] != "")
+									{
+										array_push($response, array("bookedTeacher"=>$row[0], "bookedBranch"=>$row[1], "bookedStartDate"=>$row[2], "bookedEndDate" => "","status"=>$row[5] ));
+									}
 								}else{
 									array_push($response, array("bookedTeacher"=>$row[0], "bookedBranch"=>$row[1], "bookedStartDate"=>$row[2], "bookedEndDate" => $row[3], "status" => $row[4]));
 								}
@@ -606,7 +614,7 @@
 			//echo $start." ";
 
 
-			$getRegular = "SELECT courseTeacher,courseBranch,userID,startTime,endTime,dow,startDate FROM REGULARSCHEDULE WHERE extendedDate <> '$start' ";//가장 최근 정기예약 날짜 확인 
+			$getRegular = "SELECT courseTeacher,courseBranch,userID,startTime,endTime,dow,startDate FROM REGULARSCHEDULE WHERE extendedDate <> '$start' AND extendedDate <> '' ";//가장 최근 정기예약 날짜 확인 
 			$result1 = mysqli_query($this->con,$getRegular);                                                    //이미 연장된 학생은 뺼수잇도록 
 			$addedStart= strtotime($start);
 			//$dayofweek = date('w', strtotime($startDate));
@@ -1068,14 +1076,13 @@
 					echo "future";
 					return;
 				}
-
 				$getDataFromR = "SELECT courseBranch,courseTeacher FROM REGULARSCHEDULE WHERE userID = '$userID' ";
 				$res_getDataFromR = mysqli_query($this->con,$getDataFromR);
 				if(mysqli_num_rows($res_getDataFromR ) > 0)
 				{
 					while($resData = mysqli_fetch_array($res_getDataFromR))
 					{
-						if($courseTeacher != $resData[1])
+						if($courseTeacher != $resData[1] && $courseTeacher != "")
 						{
 							echo "notMatched";
 							return;
@@ -1254,7 +1261,7 @@
 			}
 			//extending 상태인것을 써먹지 못햇을 경우 
 			
-			$selectCanceled = "SELECT courseTeacher, courseBranch, startDate, endDate, status FROM BOOKEDLIST WHERE userID = '$userID' AND status <> 'BOOKED' AND status <> 'extending' order by UNIX_TIMESTAMP(startDate) ASC ";
+			$selectCanceled = "SELECT courseTeacher, courseBranch, startDate, endDate, status FROM BOOKEDLIST WHERE userID = '$userID' AND (status = 'canceled' OR status = 'closeCanceled' ) order by UNIX_TIMESTAMP(startDate) ASC ";
 			$selectCanceledRes = mysqli_query($this->con,$selectCanceled);
 			if(mysqli_num_rows($selectCanceledRes) > 0)
 			{
@@ -1628,6 +1635,48 @@
 				echo "fail";
 			}
 			return;
+		}
+
+		function activeStudent($userID)
+		{
+			$active = "UPDATE USER SET status = 'true' WHERE userID = '$userID' ";
+			$activeQuery = mysqli_query($this->con,$active);
+
+			if(mysqli_affected_rows($this->con) > 0)
+			{
+				echo "success";
+			}else{
+				echo "fail";
+			}
+		}
+
+		function putRegularForNull($userID, $courseTeacher, $courseBranch)
+		{
+			if($this->filterTeacherBranch($courseTeacher, $courseBranch) != "success")
+			{
+				return;
+			} 
+			$put = "INSERT INTO REGULARSCHEDULE(courseTeacher, courseBranch, userID) VALUES ('$courseTeacher', '$courseBranch', '$userID') ";
+			$query = mysqli_query($this->con,$put);
+			if(mysqli_affected_rows($this->con) > 0)
+			{
+				echo "success";
+			}else{
+				echo "fail";
+			}
+		}
+
+		function deleteCourse($userID, $startDate)
+		{
+			$deleteCourse = "DELETE FROM BOOKEDLIST WHERE userID = '$userID' AND startDate = '$startDate' ";
+			$deleteQuery = mysqli_query($this->con,$deleteCourse);
+			if(mysqli_affected_rows($this->con) > 0)
+			{
+				echo "success";
+			}else{
+				echo "fail";
+			}
+
 		}
 
 		

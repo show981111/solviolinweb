@@ -159,7 +159,6 @@
             }
                     
         }
-        console.log(dateforcolor);
         for(var i = 0; i < dateforcolor.length; i++)
         {
                     
@@ -215,7 +214,6 @@
                 
                 },
                 success: function(data) {
-                    console.log(data);
                     switch(data)
                     {
                         case "success":
@@ -241,20 +239,17 @@
 
                 error: function(xhr, textStatus, error){
                     alert("인터넷 연결을 확인해주세요.")
-                    console.log(xhr.statusText);
-                    console.log(textStatus);
-                    console.log(error);
+                    
                 }
             });
         }
 
         function changeDay(selectStart, formatEnd , formatStart, teacher)
         {
-            console.log("changeDay Called");
-            console.log(formatEnd);
+           
             if(selectStart <= formatEnd && selectStart > formatStart)
             {
-                console.log(mainTeacher);
+              
                 if(mainTeacher == "none")
                 {
                     alert("먼저 정기예약을 해주세요.")
@@ -275,7 +270,6 @@
                         
                         },
                         success: function(data) {
-                            console.log(data);
                             var output = JSON.parse(data);
                             
                             $.each(output, function (i, item) {
@@ -290,9 +284,7 @@
 
                             if(canceledList.length > 0)
                             {
-                                console.log(canceledList);
                                 var canceledDate = canceledList[(canceledList.length - 1)]["bookedStartDate"];
-                                console.log(canceledDate);
                                 jQuery.ajax({
                                     url: "http://show981111.cafe24.com/putNewlyDate.php",
                                     type: 'POST',
@@ -307,7 +299,6 @@
                                     
                                     },
                                     success: function(data) {
-                                        console.log(data);
                                         switch(data)
                                         {
                                             case "success":
@@ -388,7 +379,6 @@
                 
                 },
                 success: function(data) {
-                    console.log(data);
                     if(data.substring(0,1) == 2)
                     {
                         alert("성공적으로 연장하였습니다.")
@@ -424,9 +414,7 @@
 
         function cancelCourse(cancelTeacher, cancelStartDate, cancelEndDate)
         {
-            console.log(cancelTeacher);
-            console.log(cancelStartDate);
-            console.log(cancelEndDate);
+            
             //console.log(moment().format("YYYY-MM-DD HH:mm"));
             //var today = moment().format("YYYY-MM-DD HH:mm");
             if(cur_termEnd < cancelStartDate )
@@ -447,7 +435,6 @@
                 
                 },
                 success: function(data) {
-                    console.log(data);
                     switch(data)
                     {
                         case "success":
@@ -532,7 +519,6 @@
                         alert("담당 선생님이 아닙니다!");
                     }else{
                         if(moment(finalEnd).diff(finalStart, 'minutes') != parseInt(userDuration)){
-                            console.log(moment(finalStart).diff(finalEnd, 'minutes') );
                             alert("수강시간이 " +userDuration + "분이 아닙니다!");
                         }else{
                             var formatStart = moment(cur_termStart).format("YYYY-MM-DD");
@@ -568,7 +554,6 @@
                         userBranch:'<?php echo $userBranch; ?>',
                     },
                     success: function(data) {
-                        console.log(data);
                         var output = JSON.parse(data);
                         var events = [];
                         $.each(output, function (i, item) {
@@ -608,7 +593,6 @@
             },
             events: function(start, end, timezone, callback) {
                 
-                console.log(start.format("YYYY-MM-DD HH:mm"));
                 var option = "init";
                 var findTeacher = "";
                 if(searchTeacher)
@@ -642,7 +626,6 @@
                     
                     },
                     success: function(data) {
-                        console.log(data);
                         var output = JSON.parse(data);
                         var events = [];
                         var noMainTeacher = false;
@@ -661,11 +644,9 @@
 
 
                             });
-                            console.log(output[i].mainTeacher);
                             if(output[i].mainTeacher)
                             {
                                 mainTeacher = output[i].mainTeacher;
-                                console.log(mainTeacher);
                             }
                             
                         })
@@ -684,7 +665,6 @@
                     data: {
                     },
                     success: function(data) {
-                        console.log(data);
                         var output = JSON.parse(data);
                         $.each(output, function (i, item) {
 
@@ -738,7 +718,6 @@
                         if(typeof teachername != 'undefined')
                         {
                             searchedTeacher = teachername;
-                            console.log(teachername);
                             jQuery.ajax({
                                 url: "http://show981111.cafe24.com/getCourseTimeLine.php",
                                 type: 'POST',
@@ -746,7 +725,6 @@
                                     userBranch:'<?php echo $userBranch; ?>'
                                 },
                                 success: function(data) {
-                                    console.log(data);
                                     var output = JSON.parse(data);
                                     
                                     $.each(output, function (i, item) {
@@ -754,7 +732,6 @@
                                         if(searchedTeacher == output[i].courseTeacher)
                                         {
                                             exist = true;
-                                            console.log(exist);
                                             if(output[i].courseDay == '월')
                                             {
                                                 dowlist.push(1);
@@ -868,7 +845,6 @@
             selectable:true,
             selectHelper:true,
             selectOverlap : function(event) {
-                console.log(event.rendering)
                 //console.log(event.color)
                 if(event.rendering == 'background')
                 {
@@ -909,12 +885,9 @@
 
             eventClick:function(calEvent, jsEvent, view)
             {
-                console.log(userID);
-                console.log(calEvent.title);
                 var openString = moment(calEvent.start).format("YYYY-MM-DD HH:mm");
                 var endString = moment(calEvent.end).format("YYYY-MM-DD HH:mm");
-                console.log(openString);
-                console.log(endString)
+                
                 event_Teacher = calEvent.resourceId;
                 event_Start = openString;
                 event_End = endString;
@@ -928,7 +901,6 @@
                 {
                     if (view.name != "month" && view.name != "agendaWeek")
                     {
-                        console.log(view.name)
                         return;
                     }else if (view.name == "month" || view.name == "agendaWeek") {
                         $('#calendar').fullCalendar('changeView', 'timelineDay');
@@ -957,7 +929,6 @@
                 
                 if (view.name != "month" && view.name != "agendaWeek")
                 {
-                    console.log(view.name)
                     return;
                 }else if (view.name == "month" || view.name == "agendaWeek") {
                     $('#calendar').fullCalendar('changeView', 'timelineDay');

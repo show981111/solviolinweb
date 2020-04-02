@@ -52,6 +52,7 @@ jQuery.browser = {};
     <div style='text-align:center'>
     <div class= "modalButton"id='button_Extend'>수업 연장</div>
     <div class= "modalButton"id='button_CancelCourse' >수업 취소</div>
+    <div class= "modalButton"id='button_DeleteCourse' >수업 삭제</div>
     <div class= "modalButton"id='button_Cancel2'>취소</div>
     
     </div>
@@ -149,6 +150,21 @@ jQuery.browser = {};
     </div>
 </div>
 
+<div class="modalWindow_container" id='modal_null'>
+    <div class="modalWindow">   
+    
+    <div style='text-align:center'>
+    <input class= "modalButton" type="text" id="nullUserID" placeholder="유저아이디">
+    <input class = "modalButton" type="text" id="nullUserBranch" placeholder = "지점">
+    <input class = "modalButton" type="text" id="nullUserTeacher" placeholder = "선생님">
+    <div></div>
+    <div class= "modalButton"id='button_Ok_null' style="display: inline-block;">등록</div>
+    <div class= "modalButton"id='button_Cancel_null' style="display: inline-block;">취소</div>
+    
+    </div>
+    </div>
+</div>
+
 
 
 
@@ -213,44 +229,51 @@ jQuery.browser = {};
       container.style.opacity = 1;
     }
 
-    function hideModal() {
-      var container = document.querySelector('.modalWindow_container');
+    // function hideModal() {
+    //   var container = document.querySelector('.modalWindow_container');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideSecondModal() {
+    //   var container = document.querySelector('#modal2');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideThirdModal() {
+    //   var container = document.querySelector('#modal3');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideOpenModal()
+    // {
+    //   var container = document.querySelector('#modal_open');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideExtendModal()
+    // {
+    //   var container = document.querySelector('#modal_extend');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideTeacherModal()
+    // {
+    //   var container = document.querySelector('#modal_teacherTime');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    // function hideTeacherInfoModal()
+    // {
+    //   var container = document.querySelector('#modal_Teacher');
+    //   container.style.opacity = 0;
+    //   container.style.pointerEvents = 'none';
+    // }
+    function hideModal(id)
+    { 
+      var container = document.querySelector("[id="+id +"]");
       container.style.opacity = 0;
       container.style.pointerEvents = 'none';
-    }
-    function hideSecondModal() {
-      var container = document.querySelector('#modal2');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
-    }
-    function hideThirdModal() {
-      var container = document.querySelector('#modal3');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
-    }
-    function hideOpenModal()
-    {
-      var container = document.querySelector('#modal_open');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
-    }
-    function hideExtendModal()
-    {
-      var container = document.querySelector('#modal_extend');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
-    }
-    function hideTeacherModal()
-    {
-      var container = document.querySelector('#modal_teacherTime');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
-    }
-    function hideTeacherInfoModal()
-    {
-      var container = document.querySelector('#modal_Teacher');
-      container.style.opacity = 0;
-      container.style.pointerEvents = 'none';
+    
     }
 
     function makeWhite(dowlist){
@@ -589,44 +612,77 @@ jQuery.browser = {};
         }
 
         $("#button_Regular").click(function(){
-            hideModal();
+            hideModal('modal1');
             clicked = "Regular";
             acceptRegular(day_teacher,day_selectStart);
             return;
         });
         $("#button_Day").click(function(){
-            hideModal();
+            hideModal('modal1');
             clicked = "buttonDay";
             changeDay(day_selectStart, day_teacher, false);
             return;
         });
         $("#button_Null").click(function(){
-            hideModal();
+            hideModal('modal1');
             changeDay(day_selectStart, day_teacher, true);
             return;
         });
         $("#button_Cancel").click(function(){
-            hideModal();
+            hideModal('modal1');
             return;
         });
 
         $("#button_Extend").click(function(){
-            hideSecondModal();
+            hideModal('modal2');
             extendCourse(event_Teacher,event_title ,event_Start, event_End);
             return;
         });
+        $("#button_DeleteCourse").click(function(){
+            jQuery.ajax({
+                url: "http://show981111.cafe24.com/deleteCourse.php",
+                type: 'POST',
+                data: {
+                    userID : event_title,
+                    startDate : event_Start
+                },
+                success: function(data) {
+                    console.log(data);
+                    switch(data)
+                    {
+                        case "success":
+                            alert("삭제했습니다.")
+                            $("#calendar").fullCalendar('refetchEvents');
+                            break;
+                        default:
+                            alert("실패하였습니다.")
+                            break;
+                    }   
+                    
+                },
+
+                error: function(xhr, textStatus, error){
+                    alert("인터넷 연결을 확인해주세요.")
+                    console.log(xhr.statusText);
+                    console.log(textStatus);
+                    console.log(error);
+                }
+            });
+            hideModal('modal2');
+            return;
+        });
         $("#button_CancelCourse").click(function(){
-            hideSecondModal();
+            hideModal('modal2');
             cancelCourse(event_Teacher,event_title, event_Start, event_End);
             return;
         });
         $("#button_Cancel2").click(function(){
-            hideSecondModal();
+            hideModal('modal2');
             return;
         });
 
         $("#button_Cancel3").click(function(){
-            hideThirdModal();
+            hideModal('modal3');
             return;
         });
         $("#button_Ok3").click(function(){
@@ -694,11 +750,11 @@ jQuery.browser = {};
                     console.log(error);
                 }
             });
-            hideThirdModal();
+            hideModal('modal3');
             return;
         });
         $("#button_Cancel_Open").click(function(){
-            hideOpenModal();
+            hideModal('modal_open');
             return;
         });
         $("#button_Ok_Open").click(function(){
@@ -759,7 +815,7 @@ jQuery.browser = {};
                     console.log(error);
                 }
             });
-            hideOpenModal();
+            hideModal('modal_open');
             return;
         });
 
@@ -806,17 +862,17 @@ jQuery.browser = {};
                     console.log(error);
                 }
             });
-            hideExtendModal();
+            hideModal('modal_extend');
             return;
         });
 
         $("#button_Cancel_extend").click(function(){
-            hideExtendModal();
+            hideModal('modal_extend');
             return;
         });
 
         $("#button_Cancel_teacher").click(function(){
-            hideTeacherModal();
+            hideModal('modal_teacherTime');
             return;
         });
 
@@ -872,7 +928,7 @@ jQuery.browser = {};
             }else{
                 alert("시간 형식을 확인해주세요.")
             }
-            hideTeacherModal();
+            hideModal('modal_teacherTime');
 
             return;
         });
@@ -930,13 +986,13 @@ jQuery.browser = {};
             }else{
                 alert("시간 형식을 확인해주세요.")
             }
-            hideTeacherModal();
+            hideModal('modal_teacherTime');
 
             return;
         });
 
         $("#button_Cancel_TeacherInfo").click(function(){
-            hideTeacherInfoModal();
+            hideModal('modal_Teacher');
             return;
         });
         $("#button_Ok_TeacherRegister").click(function(){
@@ -981,7 +1037,7 @@ jQuery.browser = {};
                         console.log(error);
                     }
                 });
-            hideTeacherInfoModal();
+            hideModal('modal_Teacher');
             return;
         });
         $("#button_Delete_TeacherOut").click(function(){
@@ -1026,8 +1082,56 @@ jQuery.browser = {};
                         console.log(error);
                     }
                 });
-            hideTeacherInfoModal();
+            hideModal('modal_Teacher');
             return;
+        });
+        $("#button_Ok_null").click(function(){
+            var nullUserID = $('#nullUserID').val();
+            var nullUserTeacher = $('#nullUserTeacher').val();
+            var nullUserBranch = $('#nullUserBranch').val();
+            jQuery.ajax({
+                    url: "http://show981111.cafe24.com/putRegularForNull.php",
+                    type: 'POST',
+                    data: {
+                        userID : nullUserID,
+                        courseTeacher : nullUserTeacher,
+                        courseBranch : nullUserBranch
+                        
+                    },
+                    success: function(data) {
+                        console.log(data);
+                        switch(data)
+                        {
+                            case "success":
+                                alert("성공적으로 등록하였습니다.")
+                                $("#calendar").fullCalendar('refetchEvents');
+                                break;
+                            case "checkBranch":
+                                alert("지점을 확인해주세요.")
+                                break;
+                            case "checkTeacher":
+                                alert("선생님을 확인해주세요.")
+                                break;
+                            default:
+                                alert("인터넷 연결을 확인해주세요.")
+                                break;
+                        }   
+                        
+                    },
+
+                    error: function(xhr, textStatus, error){
+                        alert("인터넷 연결을 확인해주세요.")
+                        console.log(xhr.statusText);
+                        console.log(textStatus);
+                        console.log(error);
+                    }
+                });
+            hideModal('modal_null');
+            return;
+        });
+
+        $("#button_Cancel_null").click(function(){
+            hideModal('modal_null');
         });
         
         
@@ -1536,6 +1640,11 @@ jQuery.browser = {};
                   myCustomButton_backup : {
                         text : "매출 백업",
                         click : function(){
+                            var check = confirm("백업하시겠습니까?");
+                            if(!check)
+                            {
+                                return;
+                            }
                             $.ajax({
 
                                 url:"http://show981111.cafe24.com/backupIncome.php",
@@ -1566,6 +1675,11 @@ jQuery.browser = {};
                   myCustomButton_extendRest : {
                         text : "남은 인원 연장",
                         click : function(){
+                            var check = confirm("연장하시겟습니까?");
+                            if(!check)
+                            {
+                                return;
+                            }
                             $.ajax({
                                 url:"http://show981111.cafe24.com/extendRest.php",
                                 type:"POST",                 
@@ -1621,6 +1735,30 @@ jQuery.browser = {};
                         }                          
                     }
                   },
+                  button_activeStudent : {
+                    text: "학생 활성화",
+                    click: function(){
+                        var activeUser = prompt("학생아이디를 입력해주세요.");
+                        if(activeUser)
+                        {
+                            $.ajax({
+                                url:"http://show981111.cafe24.com/activeStudent.php",
+                                type:"POST",
+                                data:{userID: activeUser},
+                                                                   
+                                success:function(data)
+                                {
+                                    console.log(data);
+                                    if(data == "success"){
+                                        alert("성공적으로 활성화하였습니다.");
+                                    }else{
+                                        alert("실패하였습니다. 아이디를 다시한번 확인해주세요.");
+                                    }                              
+                                }
+                            });
+                        }                          
+                    }
+                  },
                   button_resetCredit : {
                     text: "크레딧 초기화",
                     click: function(){
@@ -1641,6 +1779,12 @@ jQuery.browser = {};
                                 }
                             });
                         }                          
+                    }
+                  },
+                  button_registerNull : {
+                    text: "널 등록",
+                    click: function(){
+                        showModal('modal_null','rotate');
                     }
                   }
                 
@@ -1766,7 +1910,7 @@ jQuery.browser = {};
             },
 
             footer: {
-                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo, button_quitStudent, button_resetCredit',
+                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo, button_quitStudent, button_activeStudent ,button_resetCredit, button_registerNull',
                 left : 'myCustomButton_pushUp'
             },
 
