@@ -412,7 +412,7 @@ jQuery.browser = {};
                 type: 'POST',
                 data: {
                     userID : userID,
-                    option : "cancelAll"
+                    option : "cancelAll_admin"
                 
                 },
                 success: function(data) {
@@ -454,7 +454,7 @@ jQuery.browser = {};
                             
                             },
                             success: function(data) {
-                                console.log(data);
+                                console.log("su"+data);
                                 switch(data)
                                 {
                                     case "success":
@@ -481,6 +481,7 @@ jQuery.browser = {};
                                         break;
                                     default:
                                         alert("실패하였습니다.")
+                                        $("#calendar").fullCalendar('refetchEvents');
                                         break;
                                 }   
                             },
@@ -1176,15 +1177,20 @@ jQuery.browser = {};
             // 
 
             eventRender: function(event, element, view) {
-
-                var start = moment(event.start.format("YYYY-MM-DD HH:mm"));
-                var end = moment(event.end.format("YYYY-MM-DD HH:mm"));
-                var duration = end.diff(start,"minutes");
-                var durationForDisplay = "  [" + duration + "min" + "]";
-
-                if(duration != 30 && event.title != '대체수업/예약해주세요')
+                //console.log(event.end);
+                if(event.start && event.end )
                 {
-                    element.find('.fc-title').append(durationForDisplay); 
+                    var start = moment(event.start.format("YYYY-MM-DD HH:mm"));
+                    var end = moment(event.end.format("YYYY-MM-DD HH:mm"));
+                    var duration = end.diff(start,"minutes");
+                    var durationForDisplay = "  [" + duration + "min" + "]";
+
+                    if(duration != 30 && event.title != '대체수업/예약해주세요')
+                    {
+                        element.find('.fc-title').append(durationForDisplay); 
+                    }
+                }else{
+                    console.log(event.end);
                 }
 
             },
@@ -1714,24 +1720,34 @@ jQuery.browser = {};
                   button_quitStudent : {
                     text: "학생 비활성화",
                     click: function(){
-                        var deleteUser = prompt("학생아이디를 입력해주세요.");
-                        if(deleteUser)
+                        var deleteUser = prompt("학생아이디와 수강 종료날짜(YYYY-MM-DD)를 입력해주세요(,구분).").split(",");;
+                        if(deleteUser.length == 2)
                         {
-                            $.ajax({
-                                url:"http://show981111.cafe24.com/deleteStudent.php",
-                                type:"POST",
-                                data:{userID: deleteUser},
-                                                                   
-                                success:function(data)
-                                {
-                                    console.log(data);
-                                    if(data == "success"){
-                                        alert("성공적으로 삭제하였습니다.");
-                                    }else{
-                                        alert("실패하였습니다. 아이디를 다시한번 확인해주세요.");
-                                    }                              
-                                }
-                            });
+                            if(moment(deleteUser[1], "YYYY-MM-DD", true).isValid())
+                            {
+                                $.ajax({
+                                    url:"http://show981111.cafe24.com/deleteStudent.php",
+                                    type:"POST",
+                                    data:{
+                                        userID: deleteUser[0],
+                                        endDate : deleteUser[1]
+                                    },
+                                                                       
+                                    success:function(data)
+                                    {
+                                        console.log(data);
+                                        if(data == "success"){
+                                            alert("성공적으로 삭제하였습니다.");
+                                        }else{
+                                            alert("실패하였습니다. 아이디를 다시한번 확인해주세요.");
+                                        }                              
+                                    }
+                                });
+                            }else{
+                                alert("날짜를 다시 확인해주세요.");
+                            }
+                        }else{
+                            alert("정보 두개를 입력해주세요.");
                         }                          
                     }
                   },
@@ -1787,6 +1803,7 @@ jQuery.browser = {};
                         showModal('modal_null','rotate');
                     }
                   }
+
                 
               },
 
