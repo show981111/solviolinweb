@@ -834,8 +834,11 @@
 			}else
 			{
 				$updatequery = "UPDATE REGULARSCHEDULE SET courseTeacher = '$pt_courseTeacher',courseBranch = '$pt_courseBranch', startTime = '$startTime', endTime = '$endTime', startDate = '$startDate',dow = '$dow',extendedDate = '$this->cur_termStart' WHERE userID = '$pt_userID' ";
-				$updateResult = mysqli_query($this->con,$updatequery);// 기존의 정기예약이 있는 경우
-				if(mysqli_affected_rows($this->con) > 0)
+				if(!$isSecond)
+				{
+					$updateResult = mysqli_query($this->con,$updatequery);// 기존의 정기예약이 있는 경우
+				}
+				if(mysqli_affected_rows($this->con) > 0 && !$isSecond)
 				{
 					$response = "success";
 				}else
@@ -1704,7 +1707,7 @@
 
 		function deleteCourse($userID, $startDate)
 		{
-			$deleteCourse = "DELETE FROM BOOKEDLIST WHERE userID = '$userID' AND startDate = '$startDate' ";
+			$deleteCourse = "DELETE FROM BOOKEDLIST WHERE userID = '$userID' AND startDate = '$startDate' AND status = 'BOOKED'";
 			$deleteQuery = mysqli_query($this->con,$deleteCourse);
 			if(mysqli_affected_rows($this->con) > 0)
 			{
@@ -1713,6 +1716,41 @@
 				echo"fail";
 			}
 
+		}
+
+		function deleteRegular($userID,$cancelBranch, $cancelTeacher, $startDate,$startTime,$dow)
+		{
+			$select = "SELECT userID, startDate FROM BOOKEDLIST WHERE userID = '$userID' AND courseTeacher = '$cancelTeacher' AND courseBranch = '$cancelBranch' AND ownerID = '$userID' order by UNIX_TIMESTAMP(startDate) DESC ";
+			$selectQuery = mysqli_query($this->con, $select);
+			while($row = mysqli_fetch_array($selectQuery))
+			{
+				if(strtotime($startDate) > strtotime($row[1]))
+				{
+					break;
+				}
+				$timeOfBooked = substr( $row[1], 11 );
+				if($timeOfBooked == $startTime && date('w',strtotime($row[1])) == $dow)
+				{
+					$deleteCourse = "DELETE FROM BOOKEDLIST WHERE userID = '$userID' AND startDate = '$row[1]' AND ownerID = '$userID' AND status = 'BOOKED' ";
+					$deleteQuery = mysqli_query($this->con,$deleteCourse);
+					if(mysqli_affected_rows($this->con) > 0)
+					{
+
+					}else{
+						return;
+					}
+				}
+			}
+			$deleteRegularSchedule = "DELETE FROM REGULARSCHEDULE WHERE userID = '$userID' AND courseTeacher = '$cancelTeacher' AND courseBranch = '$cancelBranch' AND dow = '$dow' AND startTime = '$startTime' ";
+			$deleteScheduleQuery = mysqli_query($this->con,$deleteRegularSchedule);
+			if(mysqli_affected_rows($this->con) > 0)
+			{
+
+			}else{
+				return;
+			}
+			echo "success";
+			
 		}
 
 		

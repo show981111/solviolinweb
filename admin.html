@@ -54,6 +54,7 @@ jQuery.browser = {};
     <div class= "modalButton"id='button_Extend'>수업 연장</div>
     <div class= "modalButton"id='button_CancelCourse' >수업 취소</div>
     <div class= "modalButton"id='button_DeleteCourse' >수업 삭제</div>
+    <div class= "modalButton"id='button_DeleteRegular' >정기 삭제</div>
     <div class= "modalButton"id='button_Cancel2'>취소</div>
     
     </div>
@@ -623,6 +624,47 @@ jQuery.browser = {};
             });
         }
 
+        function deleteRegular(cancelTeacher, cancelUserID,cancelStartDate)
+        {
+            console.log(cancelStartDate);
+            
+            jQuery.ajax({
+                url: "http://show981111.cafe24.com/deleteRegular.php",
+                type: 'POST',
+                data: {
+                    cancelTeacher : cancelTeacher,
+                    cancelBranch : userBranch,
+                    userID : cancelUserID,
+                    startDate : cancelStartDate
+                    
+                },
+                success: function(data) {
+                    console.log(data);
+                    switch(data)
+                    {
+                        case "success":
+                            alert("성공적으로 삭제하였습니다.")
+                            $("#calendar").fullCalendar('refetchEvents');
+                            break;
+                        case "checkStartDate":
+                            alert("시작날짜를 확인해주세요.")
+                            break;
+                        default:
+                            alert("실패하였습니다.")
+                            break;
+                    }   
+                    
+                },
+
+                error: function(xhr, textStatus, error){
+                    alert("인터넷 연결을 확인해주세요.")
+                    console.log(xhr.statusText);
+                    console.log(textStatus);
+                    console.log(error);
+                }
+            });
+        }
+
         $("#button_Regular").click(function(){
             hideModal('modal1');
             clicked = "Regular";
@@ -688,6 +730,13 @@ jQuery.browser = {};
             cancelCourse(event_Teacher,event_title, event_Start, event_End);
             return;
         });
+        $("#button_DeleteRegular").click(function(){
+            hideModal('modal2');
+            deleteRegular(event_Teacher,event_title, event_Start);
+            return;
+        });
+
+
         $("#button_Cancel2").click(function(){
             hideModal('modal2');
             return;
