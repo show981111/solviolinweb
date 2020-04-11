@@ -38,6 +38,7 @@ jQuery.browser = {};
     
     <div style='text-align:center'>
     <div class= "modalButton" id='button_Regular'>정기예약</div>
+    <label class="modalButton" ><input class = "modalButton" type="checkbox" id = "cb_secondRegular" value="1">정기예약 2개째</label>
     <div class= "modalButton" id='button_Day' >보강예약</div>
     <div class= "modalButton" id='button_Null' >널로 예약</div>
     <div class= "modalButton" id='button_Cancel'>취소</div>
@@ -344,6 +345,15 @@ jQuery.browser = {};
                 return;
             }
 
+            var isSecond = document.getElementById("cb_secondRegular").checked;
+
+            if(isSecond)
+            {
+                isSecond = "true";
+            }else{
+                isSecond = "false";
+            }
+            console.log(isSecond);
             jQuery.ajax({
                 url: "http://show981111.cafe24.com/acceptRegular.php",
                 type: 'POST',
@@ -353,7 +363,8 @@ jQuery.browser = {};
                     pt_userID : userID,
                     pt_startTime : selectStart,
                     pt_startDateAndDow : userDuration,
-                    reject : "web"// courseDay and startTime will calculated at php
+                    reject : "web",
+                    isSecond : isSecond// courseDay and startTime will calculated at php
                     // $pt_courseTeacher = $_POST['pt_courseTeacher'];
                     // $pt_courseBranch = $_POST['pt_courseBranch'];
                     // $pt_userID = $_POST['pt_userID'];
@@ -432,7 +443,7 @@ jQuery.browser = {};
                     if(canceledList.length > 0 || isNull)
                     {
                         var canceledDate = "admin";
-                        if(canceledList.length > 0)
+                        if(canceledList.length > 0 && !isNull)
                         {   
                             console.log(canceledList);
                             var canceledDate = canceledList[(canceledList.length - 1)]["bookedStartDate"];
@@ -1738,6 +1749,7 @@ jQuery.browser = {};
                                         console.log(data);
                                         if(data == "success"){
                                             alert("성공적으로 삭제하였습니다.");
+                                            $("#calendar").fullCalendar('refetchEvents');
                                         }else{
                                             alert("실패하였습니다. 아이디를 다시한번 확인해주세요.");
                                         }                              

@@ -9,6 +9,7 @@
 	$pt_startTime = $_POST['pt_startTime'];//15:00 ~ 16:00 in web -> select Start YYYY-MM-DD HH:mm
 	$pt_startDateAndDow = $_POST['pt_startDateAndDow'];// 2020-02-06 월 in web -> userDuration
 	$pt_reject = $_POST['reject'];
+	$isSecond;
 
 	// $pt_courseTeacher = "이채정";
 	// $pt_courseBranch = "교대";
@@ -22,6 +23,8 @@
 	$startDate;
 	if($pt_reject == "web")
 	{
+		$isSecond = $_POST['isSecond'];
+
 		$startDate = date("Y-m-d", strtotime($pt_startTime));
 		$startTime = date("H:i", strtotime($pt_startTime));
 		$dow = date('w',strtotime($pt_startTime));
@@ -63,7 +66,13 @@
 		$test->deleteWaitList($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$dow,"yes");
 	}else
 	{
-		$test->acceptRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID, $dow);
+		if($isSecond != null && $isSecond == "true")
+		{
+			$test->acceptRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID, $dow, true);
+		}else{
+			$test->acceptRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID, $dow, false);
+		}
+		
 	}
 	
 

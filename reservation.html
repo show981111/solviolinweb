@@ -189,6 +189,7 @@
         var cur_termStart;
         var cur_termEnd;
         var termList = [];
+        var userType = '<?php echo $userType; ?>';
 
         var day_selectStart, day_formatEnd, day_formatStart, day_teacher;
         var event_Start, event_Teacher, event_End, event_Id;
@@ -579,15 +580,20 @@
             // 
 
             eventRender: function(event, element, view) {
-
-                var start = moment(event.start.format("YYYY-MM-DD HH:mm"));
-                var end = moment(event.end.format("YYYY-MM-DD HH:mm"));
-                var duration = end.diff(start,"minutes");
-                var durationForDisplay = "  [" + duration + "min" + "]";
-
-                if(duration != 30 && event.title != '대체수업/예약해주세요')
+                if(event.start && event.end )
                 {
-                    element.find('.fc-title').append(durationForDisplay); 
+                    var start = moment(event.start.format("YYYY-MM-DD HH:mm"));
+                    var end = moment(event.end.format("YYYY-MM-DD HH:mm"));
+                    var duration = end.diff(start,"minutes");
+                    var durationForDisplay = "  [" + duration + "min" + "]";
+
+                    if(duration != 30 && event.title != '대체수업/예약해주세요')
+                    {
+                        element.find('.fc-title').append(durationForDisplay); 
+                    }
+                }else{
+                    console.log(event.end);
+                    console.log(moment(event.start.format("YYYY-MM-DD HH:mm")));
                 }
 
             },
@@ -611,6 +617,11 @@
                 {
                     option = "every";
                 }
+                if(userType == "강사")
+                {
+                    option = "teacher";
+                    findTeacher = userName;
+                }
                 var isMain = false;
                 var isMainTeacher;
                 jQuery.ajax({
@@ -626,6 +637,7 @@
                     
                     },
                     success: function(data) {
+                        console.log(data);
                         var output = JSON.parse(data);
                         var events = [];
                         var noMainTeacher = false;

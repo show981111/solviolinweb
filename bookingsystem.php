@@ -520,7 +520,7 @@
 				if($option == "cancel_cur")
 				{
 					$query = "SELECT courseTeacher,courseBranch,startDate,endDate,status FROM BOOKEDLIST WHERE userID = '$userID' AND ( status = 'canceled' OR status = 'changeDone') order by UNIX_TIMESTAMP(startDate) DESC ";//??????
-				}else if($option == "cancelAll" || $option == "cancelCheck")
+				}else if($option == "cancelAll" || $option == "cancelCheck" || $option == "cancelAll_admin" )
 				{
 					$query = "SELECT courseTeacher,courseBranch,startDate,endDate,status FROM BOOKEDLIST WHERE userID = '$userID' AND (status = 'canceled' OR status = 'closeCanceled') order by UNIX_TIMESTAMP(startDate) DESC ";//이번학기 지난학기 취소한 수업을 알기위한 쿼리
 				}else if($option == "changeRes")
@@ -805,7 +805,7 @@
 
 		}
 
-		function acceptRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$dow)
+		function acceptRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$dow, $isSecond)
 		{
 			$response;
 			$this->getTermList("no");
@@ -857,7 +857,7 @@
 				if(strtotime($startDate) >= strtotime($this->cur_termStart) && strtotime($startDate) <= strtotime($this->future_termEnd) )//현 학기,다음학기를 신청햇다면 
 				{	
 
-					$response = $this->changeRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID, $this->future_termEnd);//유저가 신청했을 경우 현학기 내부에서만 조절 가능하므로 끝나는 날은 현학기 종료일, 어디민이라고 하더라도 현학기 종료일까지만 연장을 하고 추후는 텀을 연장함으로써 구현해라 
+					$response = $this->changeRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID, $this->future_termEnd, $isSecond);//유저가 신청했을 경우 현학기 내부에서만 조절 가능하므로 끝나는 날은 현학기 종료일, 어디민이라고 하더라도 현학기 종료일까지만 연장을 하고 추후는 텀을 연장함으로써 구현해라 
 					//echo $response. "changeRegular";
 					if($response == "success")
 					{
@@ -869,36 +869,39 @@
 			}
 		}
 
-		function changeRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$endChangeDate)
+		function changeRegular($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$endChangeDate, $isSecond)
 		{
 			$response;
 			$selectquery = "SELECT startDate FROM BOOKEDLIST WHERE userID = '$pt_userID' AND status = 'BOOKED' AND ownerID = '$pt_userID' ";
 			$fetch = mysqli_query($this->con,$selectquery);
 			if(mysqli_num_rows ( $fetch ) > 0)// 기존 사용자의 경우 기존 정기예약이 있겟지!
 			{
-				while($row = mysqli_fetch_array($fetch))
+				if(!$isSecond)
 				{
-					$FormatStartDate = date('Y-m-d', strtotime($row[0]));
-
-					$changedStartDate = strtotime($startDate);
-					$tochangeStartDate = strtotime($FormatStartDate);
-
-					$isSameWeek = date('oW', $changedStartDate) === date('oW', $tochangeStartDate) && date('Y', $changedStartDate) === date('Y', $tochangeStartDate);
-					if($isSameWeek || strtotime($startDate) < strtotime($row[0]))
+					while($row = mysqli_fetch_array($fetch))
 					{
-						$deletequery = "DELETE FROM BOOKEDLIST WHERE userID = '$pt_userID' AND status = 'BOOKED' AND ownerID = '$pt_userID' AND startDate = '$row[0]' ";
-						$delete = mysqli_query($this->con,$deletequery);
-						if(mysqli_affected_rows($this->con) > 0)
-						{
-							$response = "success";
-						}else
-						{
-							$response = "internet_fail_delete_BookedList";
-							return $response;
-						}
-					}//같은 주에 있는 거부터 변경된 날 이후로 다 삭제
-					
+						$FormatStartDate = date('Y-m-d', strtotime($row[0]));
 
+						$changedStartDate = strtotime($startDate);
+						$tochangeStartDate = strtotime($FormatStartDate);
+
+						$isSameWeek = date('oW', $changedStartDate) === date('oW', $tochangeStartDate) && date('Y', $changedStartDate) === date('Y', $tochangeStartDate);
+						if($isSameWeek || strtotime($startDate) < strtotime($row[0]))
+						{
+							$deletequery = "DELETE FROM BOOKEDLIST WHERE userID = '$pt_userID' AND status = 'BOOKED' AND ownerID = '$pt_userID' AND startDate = '$row[0]' ";
+							$delete = mysqli_query($this->con,$deletequery);
+							if(mysqli_affected_rows($this->con) > 0)
+							{
+								$response = "success";
+							}else
+							{
+								$response = "internet_fail_delete_BookedList";
+								return $response;
+							}
+						}//같은 주에 있는 거부터 변경된 날 이후로 다 삭제
+						
+
+					}
 				}
 				
 				// 아래랑 똑같다 ;; //
