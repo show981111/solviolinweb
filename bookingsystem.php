@@ -590,6 +590,11 @@
 			{
 				$start = $this->futureNext_termStart;
 				$end = $this->futureNext_termEnd;
+				if($start == "" ||$start == null )
+				{
+					echo "fail";
+					return;
+				}
 			}else{
 				if(strtotime($this->today) >= strtotime($start) )//오늘보다 이전의 날짜로 연장할수 없음 
 				{
@@ -1751,6 +1756,26 @@
 			}
 			echo "success";
 			
+		}
+
+		function login($userID, $userPassword, $userToken)
+		{
+			$found = false;
+			$response = array();
+			$select = "SELECT userID, userBranch, userName, userDuration FROM USER WHERE userID = '$userID' AND userPassword = '$userPassword' ";
+			$selectQuery = mysqli_query($this->con, $select);
+			while($row = mysqli_fetch_array($selectQuery))
+			{
+				array_push($response, array("userID"=>$row[0], "userBranch"=>$row[1], "userName"=>$row[2],"userDuration"=>$row[3] ));
+				$found = true;
+			}
+			if($found)
+			{
+				$update = "UPDATE USER SET token = '$userToken' WHERE userID = '$userID' ";
+				$push = mysqli_query($this->con, $update);
+			}
+
+			echo json_encode($response,JSON_UNESCAPED_UNICODE);
 		}
 
 		
