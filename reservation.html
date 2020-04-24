@@ -418,7 +418,11 @@
             
             //console.log(moment().format("YYYY-MM-DD HH:mm"));
             //var today = moment().format("YYYY-MM-DD HH:mm");
-            if(cur_termEnd < cancelStartDate )
+            console.log(cur_termEnd);
+            console.log(cancelStartDate);
+            var tempCancel = moment(cancelStartDate).format("YYYY-MM-DD");
+            console.log(tempCancel)
+            if(cur_termEnd < tempCancel )
             {
                 alert("이번달 수업만 취소가 가능합니다");
                 return;

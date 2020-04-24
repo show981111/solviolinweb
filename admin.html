@@ -1863,6 +1863,20 @@ jQuery.browser = {};
                     click: function(){
                         showModal('modal_null','rotate');
                     }
+                  },
+                  button_getIncome : {
+                    text: "돈계산",
+                    click: function(){
+                        $.ajax({
+                            url:"http://show981111.cafe24.com/getIncome.php",
+                            type:"POST", 
+                            data:{branch : userBranch},                  
+                            success:function(data)
+                            {
+                                alert(data);                       
+                            }
+                        });                        
+                    }
                   }
 
                 
@@ -1988,7 +2002,7 @@ jQuery.browser = {};
             },
 
             footer: {
-                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo, button_quitStudent, button_activeStudent ,button_resetCredit, button_registerNull',
+                right: 'myCustomButton4, myCustomButton5, myCustomButton6, myCustomButton_pushDown, myCustomButton_backup, myCustomButton_extend, myCustomButton_extendRest, button_registerTeacher, button_TeacherInfo, button_quitStudent, button_activeStudent ,button_resetCredit, button_registerNull, button_getIncome',
                 left : 'myCustomButton_pushUp'
             },
 

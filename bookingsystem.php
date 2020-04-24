@@ -747,6 +747,7 @@
 
 		function putWaitList($courseTeacher, $courseBranch, $userID, $startTime, $endTime, $dow,$startDate, $todayDateTime)
 		{
+
 			$response = "fail";
 
 			if(strtotime($todayDateTime) > strtotime($startDate))
@@ -773,7 +774,7 @@
 			while($NowRow = mysqli_fetch_array($NowRes))
 			{
 				if( (strtotime($NowRow[0]) <= strtotime($startTime) && strtotime($startTime) < strtotime($NowRow[1])) || 
-					(strtotime($NowRow[0]) <= strtotime($endTime) && strtotime($endTime) <= strtotime($NowRow[1])) )
+					(strtotime($NowRow[0]) < strtotime($endTime) && strtotime($endTime) <= strtotime($NowRow[1])) )
 				{
 					$response = "alreadyBooked";
 					echo $response;
@@ -804,6 +805,11 @@
 			}else
 			{
 				$response = "internet_fail";
+			}
+			if($response == "success")
+			{
+				//echo "success";
+				//$this->send_notification("admin", $userID, $courseBranch, $courseTeacher);
 			}
 
 			echo $response;
@@ -1107,7 +1113,7 @@
 						return;
 					}
 				}
-				if(strtotime($this->future_termStart) < strtotime($startDate))
+				if(strtotime($this->future_termStart) < strtotime(date('Y-m-d',strtotime($startDate) )) )
 				{
 					echo "future";
 					return;
@@ -1777,6 +1783,123 @@
 
 			echo json_encode($response,JSON_UNESCAPED_UNICODE);
 		}
+
+		function send_notification ($userName, $rq_userID, $rq_userBranch, $rq_courseTeacher)
+		{
+
+			$sql = "SELECT token FROM USER WHERE userName = '$userName' AND token <> '' ";
+
+			$result = mysqli_query($this->con,$sql);
+			$tokens = array();
+
+			if(mysqli_num_rows($result) > 0 ){
+
+				while ($row = mysqli_fetch_array($result)) {
+					$tokens[] = $row[0];
+				}
+			}
+
+			mysqli_close($conn);
+
+			$message = array();
+			$message['title'] = "정기예약 요청이 들어왔습니다!";
+			$message['body'] = $rq_userID." / ". $rq_userBranch. " / ".$rq_courseTeacher;
+			
+			$url = 'https://fcm.googleapis.com/fcm/send';
+			$fields = array(
+				 'registration_ids' => $tokens,
+				 'data' => $message
+				);
+
+			$headers = array(
+				'Authorization:key = AAAAxVbNMaU:APA91bEyzf4ZnRJf-XJVsGdhlpUFZyLTZAt46M5ZnqlLBn---LFgaBroonpilsI43vnmEIAPly2Y9eExnUtRc6g45tQxVrpJZFD_5e860-zt8_KZ2bbh1WmOPG2f2yft8yvlbN6z4sO3 ',
+				'Content-Type: application/json'
+			);
+
+		    $ch = curl_init();
+	        curl_setopt($ch, CURLOPT_URL, $url);
+	        curl_setopt($ch, CURLOPT_POST, true);
+	        curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+	        curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0);  
+	        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+	        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
+	        $result = curl_exec($ch);           
+	        if ($result === FALSE) {
+	            die('Curl failed: ' . curl_error($ch));
+	        }
+	        curl_close($ch);
+	        echo $result;
+	        return $result;
+		}
+
+		function calculateIncome($branch)
+		{
+
+			$this->getTermList("no");
+			$start = $this->cur_termStart;
+			$end = $this->cur_termEnd;
+			//echo $start. " ".$end;
+			$incomeList = array();
+			$select = "SELECT A.Teacher, B.userID FROM TEACHERLIST A JOIN USER B ON A.Teacher = B.userName AND A.Branch = '$branch' AND B.userBranch ='$branch'  ";
+			$selectQuery = mysqli_query($this->con, $select);
+			
+			while($teacherRow = mysqli_fetch_array($selectQuery))
+			{
+				
+				$income = 0;
+				$getIncome = "SELECT startDate, endDate,courseTeacher FROM BOOKEDLIST WHERE courseBranch = '$branch' AND courseTeacher = '$teacherRow[0]' AND status = 'BOOKED' AND userID <> '$teacherRow[1]' order by UNIX_TIMESTAMP(startDate) DESC";
+				$getIncomeQuery = mysqli_query($this->con, $getIncome);
+				//echo " ////////////////// ";
+				while($incomeRow = mysqli_fetch_array($getIncomeQuery))
+				{
+					
+					if( strtotime(date("Y-m-d",strtotime($incomeRow[0]))) >= strtotime($start) && strtotime(date("Y-m-d",strtotime($incomeRow[1]))) <= strtotime($end))
+					{
+						
+						$startTime = date('H:i', strtotime($incomeRow[0])) ;
+						$endTime = date('H:i', strtotime($incomeRow[1])) ;
+						//$criterion = strtotime('16:00');
+						$startTimeSplit = explode(":", $startTime);
+						$endTimeSplit = explode(":", $endTime);
+						$startTimeInMinute = $startTimeSplit[0]*60 + $startTimeSplit[1];
+						$endTimeInMinute = $endTimeSplit[0]*60 + $endTimeSplit[1];
+						$criterion = 16*60;
+
+						$intervalFront = $startTimeInMinute - $criterion;
+						$intervalAfter = $endTimeInMinute - $criterion;
+						// echo "TIME: ".$startTime. " ~ ". $endTime;
+						// echo " => ".$intervalFront. " + ". $intervalAfter;
+						
+						if($intervalFront < 0 && $intervalAfter <= 0)
+						{
+							// echo "fir";
+							$income = $income + ($intervalAfter - $intervalFront)/15 * 5500;//16:00 시 전 
+						}else if($intervalFront >= 0 && $intervalAfter > 0)
+						{
+							// echo "mid";
+							$income = $income+ ($intervalAfter - $intervalFront)/15 * 6250;// 16:00 이후
+						}else{
+							//echo "else";
+							$income = $income+((-$intervalFront)/15 )* 5500 + $intervalAfter/15 * 6250;
+						}
+						//echo " ICOME ".$income . "EE";
+					}
+					if(strtotime($incomeRow[0]) < strtotime($start) )
+					{
+						break;
+					}
+					
+					
+				}
+				array_push($incomeList, array($teacherRow[0] => $income) );
+
+			}
+
+			echo json_encode($incomeList,JSON_UNESCAPED_UNICODE);
+		}
+
+
 
 		
 	}
