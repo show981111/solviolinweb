@@ -466,7 +466,7 @@ jQuery.browser = {};
                             
                             },
                             success: function(data) {
-                                console.log("su"+data);
+                                console.log(data);
                                 switch(data)
                                 {
                                     case "success":
@@ -1865,7 +1865,7 @@ jQuery.browser = {};
                     }
                   },
                   button_getIncome : {
-                    text: "돈계산",
+                    text: "$PayDay$",
                     click: function(){
                         $.ajax({
                             url:"http://show981111.cafe24.com/getIncome.php",

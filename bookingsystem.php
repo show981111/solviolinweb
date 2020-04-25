@@ -475,6 +475,7 @@
 				if(mysqli_affected_rows($this->con) > 0)
 				{
 					$response = "success";
+					$this->send_notification($courseTeacher,$userID." / ".$userBranch." / ".$startDate, "수업이 변경됬어요!");
 				}else{
 					$response = "fail";
 				}
@@ -750,11 +751,11 @@
 
 			$response = "fail";
 
-			if(strtotime($todayDateTime) > strtotime($startDate))
-			{
-				echo "past";
-				return;
-			}
+			// if(strtotime($todayDateTime) > strtotime($startDate))
+			// {
+			// 	echo "past";
+			// 	return;
+			// }
 			$this->getTermList("no");
 			
 			$getStatus = "SELECT status FROM USER WHERE userID = '$userID' ";
@@ -808,8 +809,7 @@
 			}
 			if($response == "success")
 			{
-				//echo "success";
-				//$this->send_notification("admin", $userID, $courseBranch, $courseTeacher);
+				$this->send_notification("admin",$courseTeacher." / ".$courseBranch." / ".$userID." / ".$startTime."/".$endTime."/".$startDate , "정기예약 신청이 왔습니다");
 			}
 
 			echo $response;
@@ -1176,7 +1176,7 @@
 			//"INSERT INTO BOOKEDLIST (courseTeacher, courseBranch, startDate, endDate, userID, ownerID, status) VALUES ('$row[0]', '$row[1]', '$cand_StartDateTime', '$cand_EndDateTime', '$row[2]', '$row[2]', 'BOOKED'  ) ";
 			$put = "INSERT INTO BOOKEDLIST (courseTeacher, courseBranch, startDate, endDate, userID, status, changeFrom) VALUES ('$r_courseTeacher', '$r_courseBranch', '$startDate', '$candidateTimeE', '$userID','BOOKED','$canceledDate'  ) ";
 			$putquery = mysqli_query($this->con,$put);
-
+			$res = "success";
 			if(mysqli_affected_rows($this->con) > 0)
 			{
 				if($canceledDate != "admin")//널로 넣어주는 것은 체인지 돈으로 업글해줄 필요가 읍다 체인지 돈이면 그 수업으로 보강 잡을 수 없다. 
@@ -1185,18 +1185,23 @@
 					$updatequery = mysqli_query($this->con, $updateStatus);
 					if(mysqli_affected_rows($this->con) > 0)
 					{
-						echo"success";
-						return;
+						$res = "success";
 					}else{
 						echo "fail";
 						return;
 					}
 				}
-				echo "success";
-				return;
+				$res = "success";
 			}else{
 				echo "fail";
 				return;
+			}
+
+			if($res == "success")
+			{
+
+				$aka = $this->send_notification($courseTeacher,$userID." / ".$courseBranch." / ".$startDate, "수업이 변경됬어요!");
+				echo $res;
 			}
 		}
 
@@ -1784,7 +1789,7 @@
 			echo json_encode($response,JSON_UNESCAPED_UNICODE);
 		}
 
-		function send_notification ($userName, $rq_userID, $rq_userBranch, $rq_courseTeacher)
+		function send_notification ($userName, $messageContent, $titleContent)
 		{
 
 			$sql = "SELECT token FROM USER WHERE userName = '$userName' AND token <> '' ";
@@ -1798,18 +1803,19 @@
 					$tokens[] = $row[0];
 				}
 			}
-
-			mysqli_close($conn);
-
-			$message = array();
-			$message['title'] = "정기예약 요청이 들어왔습니다!";
-			$message['body'] = $rq_userID." / ". $rq_userBranch. " / ".$rq_courseTeacher;
+			// $message = array();
+			// $message['title'] = "NOTIFICATON!";
+			// $message["body"] = $rq_userID." / ". $rq_userBranch. " / ".$rq_courseTeacher;
+			$message = array(
+			    "title"     => $titleContent,
+			    "message"   => $messageContent
+			);
 			
 			$url = 'https://fcm.googleapis.com/fcm/send';
 			$fields = array(
 				 'registration_ids' => $tokens,
 				 'data' => $message
-				);
+			);
 
 			$headers = array(
 				'Authorization:key = AAAAxVbNMaU:APA91bEyzf4ZnRJf-XJVsGdhlpUFZyLTZAt46M5ZnqlLBn---LFgaBroonpilsI43vnmEIAPly2Y9eExnUtRc6g45tQxVrpJZFD_5e860-zt8_KZ2bbh1WmOPG2f2yft8yvlbN6z4sO3 ',
@@ -1824,12 +1830,15 @@
 	        curl_setopt ($ch, CURLOPT_SSL_VERIFYHOST, 0);  
 	        curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
 	        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($fields));
-	        $result = curl_exec($ch);           
+	        $result = curl_exec($ch);   
+	        $res;        
 	        if ($result === FALSE) {
 	            die('Curl failed: ' . curl_error($ch));
+	            $res = "fail";
+	        }else{
+	        	$res = "success";
 	        }
 	        curl_close($ch);
-	        echo $result;
 	        return $result;
 		}
 
@@ -1870,12 +1879,17 @@
 						$intervalAfter = $endTimeInMinute - $criterion;
 						// echo "TIME: ".$startTime. " ~ ". $endTime;
 						// echo " => ".$intervalFront. " + ". $intervalAfter;
-						
-						if($intervalFront < 0 && $intervalAfter <= 0)
+						$getDow = date('w',strtotime($incomeRow[0]));
+						$weekend = false;
+						if($getDow == 0 || $getDow == 6)
+						{
+							$weekend = true;
+						}
+						if( $intervalFront < 0 && $intervalAfter <= 0 && !$weekend )
 						{
 							// echo "fir";
 							$income = $income + ($intervalAfter - $intervalFront)/15 * 5500;//16:00 시 전 
-						}else if($intervalFront >= 0 && $intervalAfter > 0)
+						}else if( ($intervalFront >= 0 && $intervalAfter > 0) || $weekend )
 						{
 							// echo "mid";
 							$income = $income+ ($intervalAfter - $intervalFront)/15 * 6250;// 16:00 이후
@@ -1883,6 +1897,10 @@
 							//echo "else";
 							$income = $income+((-$intervalFront)/15 )* 5500 + $intervalAfter/15 * 6250;
 						}
+						// if($incomeRow[2] == "현효원")
+						// {
+						// 	echo $incomeRow[0];
+						// }
 						//echo " ICOME ".$income . "EE";
 					}
 					if(strtotime($incomeRow[0]) < strtotime($start) )
