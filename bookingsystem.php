@@ -53,8 +53,8 @@
 					$termS = strtotime(date("Y-m-d",strtotime($row[0]) ));
 					$termE = strtotime(date("Y-m-d",strtotime($row[1]) ));
 
-					if(strtotime($this->today) >= $termS && strtotime($this->today) <= $termE )
-					{
+					if( (strtotime($this->today) >= $termS && strtotime($this->today) <= $termE) || (strtotime($this->today) < $termS && strtotime($this->today) > $tempE  ) )
+					{																						// 휴원기간, 즉 현학기 끝나고 다음학기 넘어가기 전, 
 						$this->cur_termStart = $row[0];
 						$this->cur_termEnd = $row[1];
 						$this->past_termStart = date("Y-m-d", $tempS );
@@ -80,6 +80,7 @@
 					}
 					$count = $count + 1;
 				}
+
 				//echo $this->termStart." ".$this->termEnd;
 			}
 			if($isEchoNeeded == "yes")
@@ -475,7 +476,7 @@
 				if(mysqli_affected_rows($this->con) > 0)
 				{
 					$response = "success";
-					$this->send_notification($courseTeacher,$userID." / ".$userBranch." / ".$startDate, "수업이 변경됬어요!");
+					$this->send_notification($cancelTeacher,$userID." / ".$cancelBranch." / ".$startDate, "수업이 취소됬어요!");
 				}else{
 					$response = "fail";
 				}
