@@ -247,8 +247,9 @@
 
         function changeDay(selectStart, formatEnd , formatStart, teacher)
         {
-           
-            if(selectStart <= formatEnd && selectStart > formatStart)
+            var tempStart = moment(selectStart).format("YYYY-MM-DD");
+             
+            if(tempStart <= formatEnd && tempStart >= formatStart)
             {
               
                 if(mainTeacher == "none")
@@ -318,8 +319,8 @@
                                             case "isBooked":
                                                 alert("빈시간대가 아닙니다.")
                                                 break;
-                                            case "already":
-                                                alert("먼저 수업을 취소해주세요.")
+                                            case "tryAgain":
+                                                alert("다시한번 시도해주세요!")
                                                 break;
                                             case "noRegular":
                                                 alert("정기예약을 먼저 해주세요.")

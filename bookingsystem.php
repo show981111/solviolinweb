@@ -465,7 +465,7 @@
 			}
 
 
-			$cancelQuery = "UPDATE BOOKEDLIST SET status = 'canceled' WHERE userID = '$userID' AND courseTeacher = '$cancelTeacher' AND courseBranch = '$cancelBranch' AND startDate = '$startDate' AND endDate = '$endDate' ";
+			$cancelQuery = "UPDATE BOOKEDLIST SET status = 'canceled' WHERE userID = '$userID' AND courseTeacher = '$cancelTeacher' AND courseBranch = '$cancelBranch' AND startDate = '$startDate' AND endDate = '$endDate'  ORDER BY num DESC LIMIT 1 ";
 			$setCredit = "UPDATE USER SET userCredit = userCredit - 1 WHERE userID = '$userID' ";
 
 			$cancelres = mysqli_query($this->con, $cancelQuery);
@@ -1050,6 +1050,11 @@
 						if( (strtotime($cand_StartDateTime) >= strtotime($formatRow) && strtotime($cand_StartDateTime) < strtotime($formatRow1)) || (strtotime($cand_EndDateTime) > strtotime($formatRow) && strtotime($cand_EndDateTime)<= strtotime($formatRow1)) )
 						{
 							$flag = 0;
+							// $var = 0;
+							// if((strtotime($cand_EndDateTime) > strtotime($formatRow))){
+							// 	$var = 1;
+							// }
+							// echo $cand_EndDateTime. " ". $formatRow. " ". $var;
 							break;
 						}else
 						{
@@ -1138,16 +1143,30 @@
 					return;
 				}
 			}
-			if($canceledDate != "admin")
+
+			if($this->matchCanceledAndBooked($userID, $canceledDate) == 0 )
 			{
-				$already = "SELECT * FROM BOOKEDLIST WHERE userID = '$userID' AND changeFrom = '$canceledDate' ";
-				$alreadyRes = mysqli_query($this->con,$already);
-				if(mysqli_num_rows($alreadyRes) > 0)
-				{
-					echo "already";
-					return;
-				}
+				$updateNotChanged = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND startDate = '$canceledDate' ";
+				$doQuery = mysqli_query($this->con, $updateNotChanged);
+				echo "tryAgain";
+				return;
 			}
+			// if($canceledDate != "admin")
+			// {
+			// 	$already = "SELECT startDate FROM BOOKEDLIST WHERE userID = '$userID' AND changeFrom = '$canceledDate' AND status <> 'changeDone' order by UNIX_TIMESTAMP(startDate) DESC";
+			// 	$alreadyRes = mysqli_query($this->con,$already);
+			// 	$countDoneClass = 0;
+			// 	if(mysqli_num_rows($alreadyRes) > 0)
+			// 	{
+			// 		while($row = mysqli_fetch_array($alreadyRes))
+			// 		{
+			// 			$countDoneClass++;
+			// 		}
+					
+			// 		if(strtotime($row[0]) < strtotime($canceledDate)) break;
+			// 	}
+				
+			// }
 			
 			$candidateTimeS = date('Y-m-d H:i', strtotime($startDate));
 			$temp = $this->getAddedTime($userDuration, strtotime($candidateTimeS));
@@ -1916,6 +1935,25 @@
 			}
 
 			echo json_encode($incomeList,JSON_UNESCAPED_UNICODE);
+		}
+
+		function matchCanceledAndBooked($userID, $canceledDate)
+		{
+			$canceledNumQuery = "SELECT * FROM BOOKEDLIST WHERE userID = '$userID' AND startDate = '$canceledDate' ";
+			$getData = mysqli_query($this->con, $canceledNumQuery);
+			$canceledNum = mysqli_num_rows($getData);
+			$changedNumQuery = "SELECT * FROM BOOKEDLIST WHERE userID = '$userID' AND changeFrom = '$canceledDate' ";
+			$changedNumData = mysqli_query($this->con, $changedNumQuery);
+			$changedNum = mysqli_num_rows($changedNumData);
+
+			if($changedNum < $canceledNum)
+			{
+				return 1;
+			}else
+			{
+				return 0;
+			}
+
 		}
 
 
