@@ -17,10 +17,7 @@
 
 		public function __construct($userBranch)
 		{
-			$host = 'localhost';
-			$user = 'show981111';
-			$pass = 'dyd1@tmdwlsfl';
-			$db = 'show981111';
+			include 'dbSol.php';
 			$this->con = mysqli_connect($host, $user, $pass, $db) or die('Unable to connect');
 			$this->userBranch = $userBranch;
 		}
@@ -467,6 +464,8 @@
 
 			$cancelQuery = "UPDATE BOOKEDLIST SET status = 'canceled' WHERE userID = '$userID' AND courseTeacher = '$cancelTeacher' AND courseBranch = '$cancelBranch' AND startDate = '$startDate' AND endDate = '$endDate'  ORDER BY num DESC LIMIT 1 ";
 			$setCredit = "UPDATE USER SET userCredit = userCredit - 1 WHERE userID = '$userID' ";
+
+
 
 			$cancelres = mysqli_query($this->con, $cancelQuery);
 
@@ -1144,12 +1143,15 @@
 				}
 			}
 
-			if($this->matchCanceledAndBooked($userID, $canceledDate) == 0 )
+			if($canceledDate != "admin")
 			{
-				$updateNotChanged = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND startDate = '$canceledDate' ";
-				$doQuery = mysqli_query($this->con, $updateNotChanged);
-				echo "tryAgain";
-				return;
+				if($this->matchCanceledAndBooked($userID, $canceledDate) == 0 )
+				{
+					$updateNotChanged = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND startDate = '$canceledDate' ";
+					$doQuery = mysqli_query($this->con, $updateNotChanged);
+					echo "tryAgain";
+					return;
+				}
 			}
 			// if($canceledDate != "admin")
 			// {
@@ -1201,15 +1203,59 @@
 			{
 				if($canceledDate != "admin")//널로 넣어주는 것은 체인지 돈으로 업글해줄 필요가 읍다 체인지 돈이면 그 수업으로 보강 잡을 수 없다. 
 				{
-					$updateStatus = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND courseBranch = '$r_courseBranch' AND startDate = '$canceledDate' AND (status = 'canceled' OR  status = 'closeCanceled')";
-					$updatequery = mysqli_query($this->con, $updateStatus);
-					if(mysqli_affected_rows($this->con) > 0)
+					// $updateStatus = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND courseBranch = '$r_courseBranch' AND startDate = '$canceledDate' AND (status = 'canceled' OR  status = 'closeCanceled')";
+					// $updatequery = mysqli_query($this->con, $updateStatus);
+					// if(mysqli_affected_rows($this->con) > 0)
+					// {
+					// 	$res = "success";
+					// }else{
+					// 	echo "fail";
+					// 	return;
+					// }
+
+					$canceledEndDate = null;
+					$getCanceledEndDate = "SELECT endDate FROM BOOKEDLIST WHERE userID = '$userID' AND courseBranch = '$r_courseBranch' AND startDate = '$canceledDate' AND (status = 'canceled' OR  status = 'closeCanceled')  ";
+					$getCanceledEndDateQuery = mysqli_query($this->con, $getCanceledEndDate);
+					while($fetch = mysqli_fetch_array($getCanceledEndDateQuery))
 					{
-						$res = "success";
-					}else{
-						echo "fail";
-						return;
+						$canceledEndDate = $fetch[0];
 					}
+					if($canceledEndDate != null )
+					{
+						$cancelStartDateTime = new DateTime($canceledDate);
+						$cancelEndDateTime = new DateTime($canceledEndDate); 
+						$interval = $cancelStartDateTime->diff($cancelEndDateTime);
+						$availableExtendMinute = $interval->format('%i');//30
+						// echo $cancelStartDateTime. " ". $cancelEndDateTime;
+						
+						$availableMinINT = (int)$availableExtendMinute;
+						$userDurationINT = (int)$userDuration; 
+						if($availableMinINT > $userDurationINT)
+						{
+							$residue = $availableExtendMinute - $userDurationINT;
+							$updateExtended = "UPDATE BOOKEDLIST SET extendedMin = '$userDuration', status = 'extending' WHERE userID = '$userID' AND courseBranch = '$r_courseBranch' AND startDate = '$canceledDate' AND (status = 'canceled' OR  status = 'closeCanceled') ";
+							$exe = mysqli_query($this->con, $updateExtended);
+							if(mysqli_affected_rows($this->con) > 0)
+							{
+								$res = "success";
+							}else{
+								echo "fail";
+								return;
+							}
+
+						}else{
+							$updateStatus = "UPDATE BOOKEDLIST SET status = 'changeDone' WHERE userID = '$userID' AND courseBranch = '$r_courseBranch' AND startDate = '$canceledDate' AND (status = 'canceled' OR  status = 'closeCanceled')";
+							$updatequery = mysqli_query($this->con, $updateStatus);
+							if(mysqli_affected_rows($this->con) > 0)
+							{
+								$res = "success";
+							}else{
+								echo "fail";
+								return;
+							}
+						}
+					}
+
 				}
 				$res = "success";
 			}else{
@@ -1277,7 +1323,7 @@
 			{
 				while($row = mysqli_fetch_array($selectRes))
 				{
-					if(strtotime($row[2]) >= strtotime($this->past_termStart) && strtotime($row[3]) <= strtotime($this->cur_termEnd) )
+					if(strtotime(date("Y-m-d",strtotime($row[2]))) >= strtotime($this->past_termStart) && strtotime(date("Y-m-d",strtotime($row[3]))) <= strtotime($this->cur_termEnd) )
 					{
 						$startDateTime = new DateTime($row[2]);
 						$endDateTime = new DateTime($row[3]); 
@@ -1333,8 +1379,8 @@
 			if(mysqli_num_rows($selectCanceledRes) > 0)
 			{
 				while($rowCancel = mysqli_fetch_array($selectCanceledRes))
-				{
-					if(strtotime($rowCancel[2]) >= strtotime($this->past_termStart) && strtotime($rowCancel[3]) <= strtotime($this->cur_termEnd) ){
+				{//strtotime(date("Y-m-d",strtotime($incomeRow[0])))
+					if(strtotime(date("Y-m-d",strtotime($rowCancel[2]))) >= strtotime($this->past_termStart) && strtotime(date("Y-m-d",strtotime($rowCancel[3]))) <= strtotime($this->cur_termEnd) ){
 						$tempExtend = strtotime($extendEndDate);
 						$extendedEndDate = date("Y-m-d H:i",strtotime('+15 minutes',$tempExtend) );
 						$extendBooked = "UPDATE BOOKEDLIST SET endDate = '$extendedEndDate', changeFrom = '$rowCancel[2]' WHERE userID = '$userID' AND courseTeacher = '$extendTeacher' AND courseBranch = '$extendBranch' AND startDate = '$extendStartDate'  ";
@@ -1773,6 +1819,7 @@
 					{
 
 					}else{
+						echo "noDeleteAfter";
 						return;
 					}
 				}
@@ -1783,6 +1830,7 @@
 			{
 
 			}else{
+				echo "noRegular";
 				return;
 			}
 			echo "success";
@@ -1799,6 +1847,31 @@
 			{
 				array_push($response, array("userID"=>$row[0], "userBranch"=>$row[1], "userName"=>$row[2],"userDuration"=>$row[3] ));
 				$found = true;
+			}
+			if($found)
+			{
+				$update = "UPDATE USER SET token = '$userToken' WHERE userID = '$userID' ";
+				$push = mysqli_query($this->con, $update);
+			}
+
+			echo json_encode($response,JSON_UNESCAPED_UNICODE);
+		}
+
+
+		function getUserAndTeacher($userID,$userBranch, $userToken)
+		{
+			$found = false;
+			$query = "SELECT A.userID,A.userBranch,A.userDuration,A.userName, B.courseTeacher FROM USER A LEFT JOIN REGULARSCHEDULE B ON A.userID = B.userID WHERE A.userID = '$userID' LIMIT 1";
+			$result = mysqli_query($this->con,$query);
+
+			$response = array();
+
+			if($result)
+			{
+				while($row = mysqli_fetch_array($result)){
+					array_push($response, array("userID"=>$row[0], "userBranch"=>$row[1], "userDuration"=>$row[2],"userName"=>$row[3],"courseTeacher" => $row[4] ));
+					$found = true;
+				}
 			}
 			if($found)
 			{
