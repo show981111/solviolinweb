@@ -589,13 +589,15 @@
 			$this->getTermList("no");
 			if($start == "" && $end == "")
 			{
-				$start = $this->futureNext_termStart;
-				$end = $this->futureNext_termEnd;
+				$start = $this->future_termStart;
+				$end = $this->future_termEnd;
 				if($start == "" ||$start == null )
 				{
 					echo "fail";
 					return;
 				}
+				// echo $start.$end;
+				// return;
 			}else{
 				if(strtotime($this->today) >= strtotime($start) )//오늘보다 이전의 날짜로 연장할수 없음 
 				{
@@ -698,6 +700,87 @@
 			echo $response;
 			return $response;
 		}
+
+		function findNotOnRegular($branch){
+			$start = "2020-08-23";
+			$end = "2020-08-29";
+
+			$query = "SELECT courseTeacher, courseBranch, userID, ownerID, startDate, endDate FROM BOOKEDLIST WHERE courseBranch = '$branch' order by UNIX_TIMESTAMP(startDate) DESC ";
+			$res = mysqli_query($this->con, $query);
+			$i = 0;
+			while($row = mysqli_fetch_array($res)){
+
+				$startDate = date('Y-m-d' , strtotime($row[4]));
+
+				//echo "hi".$startDate.$row[4];
+
+				if(strtotime($start) <= strtotime($startDate) && strtotime($startDate) <= strtotime($end)){
+
+					$selec = "SELECT * FROM REGULARSCHEDULE WHERE courseTeacher = '$row[0]' AND courseBranch = '$row[1]' AND userID = '$row[2]' ";
+					$resQuery = mysqli_query($this->con, $selec);
+					if(mysqli_num_rows($resQuery) > 0){
+						
+					}else{
+
+						$startTime = date('H:i' , strtotime($row[4]));
+						$endTime = date('H:i' , strtotime($row[5]));
+						
+						if($row[2] != "홍표이" && $row[2] != "유정연" && $row[2] != "정영탁" ){
+
+							$extend = "2020-08-05";
+							$startTime = date('H:i' , strtotime($row[4]));
+							$endTime = date('H:i' , strtotime($row[5]));
+							$dow = date('w', strtotime($row[4]));
+							$insertQuery = "INSERT INTO REGULARSCHEDULE(courseTeacher, courseBranch, userID, startTime, endTime, dow, startDate, extendedDate) VALUES ('$row[0]', '$row[1]', '$row[2]', '$startTime','$endTime', '$dow' , '$startDate',  '$extend' ) ";
+							$result = mysqli_query($this->con, $insertQuery);
+							
+							$i = $i + 1;
+							echo $row[2]. '/';
+							echo $i;
+						}
+						
+					}
+				}
+
+				if( strtotime($start) > strtotime($startDate) ) break;
+			}
+		}
+
+		function findDual($branch){
+
+			$response = array();
+			$start = "2020-08-23";
+			$end = "2020-09-26";
+
+			$query = "SELECT DISTINCT courseTeacher, courseBranch, userID, ownerID, startDate, endDate FROM BOOKEDLIST WHERE courseBranch = '$branch' order by UNIX_TIMESTAMP(startDate) DESC ";
+			$res = mysqli_query($this->con, $query);
+			$i = 0;
+			while($row = mysqli_fetch_array($res)){
+
+				$startDate = date('Y-m-d' , strtotime($row[4]));
+
+				//echo "hi".$startDate.$row[4];
+
+				if(strtotime($start) <= strtotime($startDate) && strtotime($startDate) <= strtotime($end)){
+
+					$selec = "SELECT num FROM BOOKEDLIST WHERE userID = '$row[2]' AND startDate = '$row[4]' AND endDate = '$row[5]' order by num ASC";
+					$resQuery = mysqli_query($this->con, $selec);
+					$count = mysqli_num_rows($resQuery);
+					if(mysqli_num_rows($resQuery) > 1 ){
+
+						
+						$del = "DELETE FROM BOOKEDLIST WHERE userID = '$row[2]' AND startDate = '$row[4]' AND endDate = '$row[5]' LIMIT 1";
+						$delquery = mysqli_query($this->con, $del);
+
+						echo "sec".$row[2].$row[4]. "//";
+												
+					}
+				}
+
+				if( strtotime($start) > strtotime($startDate) ) break;
+			}
+		}
+
 		function getDowKorean($num)
 		{
 			$dow;
@@ -820,39 +903,43 @@
 		{
 			$response;
 			$this->getTermList("no");
-			$selectSame = "SELECT * FROM REGULARSCHEDULE WHERE courseTeacher = '$pt_courseTeacher'AND courseBranch = '$pt_courseBranch'AND startTime = '$startTime'AND endTime = '$endTime'AND dow = '$dow' AND  userID = '$pt_userID' ";
+			$selectSame = "SELECT * FROM REGULARSCHEDULE WHERE courseTeacher = '$pt_courseTeacher'AND courseBranch = '$pt_courseBranch'AND startTime = '$startTime'AND endTime = '$endTime' AND dow = '$dow' AND  userID = '$pt_userID' ";
 			$sameRes = mysqli_query($this->con,$selectSame);
 			if(mysqli_num_rows ( $sameRes ) > 0)
 			{
-				$response = "already";//이미 정기예약이 잡힌 상황
-				                      // 
+				                      
 				$response = $this->deleteWaitList($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $pt_userID,$dow);
-				if($response == "success")
-				{
-					$response = "already";
-				}
-				
+				// if($response == "success")
+				// {
+				// 	$response = "already";
+				// }
+				$response = "already";//이미 정기예약이 잡힌 상황
 				echo $response;
 				return 0;
 				
 			}
 			//filterMonth($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $endChangeDate)
 			$filterRes = $this->filterMonth($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $this->future_termEnd, $dow);
-			if($filterRes == "notEmpty")//해당 정기예약이 비어있지 않는 경우...
+			// echo $filterRes;
+			// return 0 ;
+			if($filterRes != "success")//해당 정기예약이 비어있지 않는 경우...
 			{
-				echo "notEmpty";
+				echo $filterRes;
 				return 0;
 			}else
 			{
 				$updatequery = "UPDATE REGULARSCHEDULE SET courseTeacher = '$pt_courseTeacher',courseBranch = '$pt_courseBranch', startTime = '$startTime', endTime = '$endTime', startDate = '$startDate',dow = '$dow',extendedDate = '$this->cur_termStart' WHERE userID = '$pt_userID' ";
+
+
 				if(!$isSecond)
 				{
 					$updateResult = mysqli_query($this->con,$updatequery);// 기존의 정기예약이 있는 경우
 				}
+
 				if(mysqli_affected_rows($this->con) > 0 && !$isSecond)
 				{
-					$response = "success";
-				}else
+					$response = "success";//기존의 정기예약이 있는경우 
+				}else if( (mysqli_affected_rows($this->con) <= 0 && !$isSecond) || $isSecond)//기존의 정기예약이 없으면서 두번쨰 수업이 아닌경우 삽입 
 				{
 					$insertquery = "INSERT INTO REGULARSCHEDULE (courseTeacher, courseBranch, startTime, endTime, dow, startDate, extendedDate, userID) VALUES ('$pt_courseTeacher', '$pt_courseBranch', '$startTime', '$endTime', '$dow', '$startDate', '$this->cur_termStart', '$pt_userID'  ) ";
 
@@ -1016,6 +1103,7 @@
 
 		function filterMonth($pt_courseTeacher, $pt_courseBranch,$startTime, $endTime ,$startDate, $endChangeDate, $dow)
 		{
+			$stuck; 
 			$Formats = date('Y-m-d', strtotime($startDate));
 			$Formatst = date('H:i', strtotime($startTime));
 			$Formatet = date('H:i', strtotime($endTime));
@@ -1029,7 +1117,7 @@
 				$sameRes = mysqli_query($this->con,$selectSame);
 				if(mysqli_num_rows ( $sameRes ) > 0)
 				{
-					return "notEmpty";
+					return "notEmpty_Regular";
 				}
 			}
 			while(strtotime($cand_StartDateTime) <= strtotime($endChangeDate))
@@ -1049,6 +1137,7 @@
 						if( (strtotime($cand_StartDateTime) >= strtotime($formatRow) && strtotime($cand_StartDateTime) < strtotime($formatRow1)) || (strtotime($cand_EndDateTime) > strtotime($formatRow) && strtotime($cand_EndDateTime)<= strtotime($formatRow1)) )
 						{
 							$flag = 0;
+							$stuck = $cand_StartDateTime;
 							// $var = 0;
 							// if((strtotime($cand_EndDateTime) > strtotime($formatRow))){
 							// 	$var = 1;
@@ -1071,7 +1160,7 @@
 
 			if($flag == 0)
 			{
-				return "notEmpty";
+				return "notEmpty".$stuck;
 			}else
 			{
 				return "success";
@@ -1858,10 +1947,10 @@
 		}
 
 
-		function getUserAndTeacher($userID,$userBranch, $userToken)
+		function getUserAndTeacher($userID,$userPassword, $userToken)
 		{
 			$found = false;
-			$query = "SELECT A.userID,A.userBranch,A.userDuration,A.userName, B.courseTeacher FROM USER A LEFT JOIN REGULARSCHEDULE B ON A.userID = B.userID WHERE A.userID = '$userID' LIMIT 1";
+			$query = "SELECT A.userID,A.userBranch,A.userDuration,A.userName, B.courseTeacher FROM USER A LEFT JOIN REGULARSCHEDULE B ON A.userID = B.userID WHERE A.userID = '$userID' AND A.userPassword = '$userPassword' LIMIT 1";
 			$result = mysqli_query($this->con,$query);
 
 			$response = array();
@@ -1943,7 +2032,7 @@
 			$end = $this->cur_termEnd;
 			//echo $start. " ".$end;
 			$incomeList = array();
-			$select = "SELECT A.Teacher, B.userID FROM TEACHERLIST A JOIN USER B ON A.Teacher = B.userName AND A.Branch = '$branch' AND B.userBranch ='$branch'  ";
+			$select = "SELECT A.Teacher, B.userID FROM TEACHERLIST A JOIN USER B ON A.Teacher = B.userName AND A.Branch = '$branch' AND B.userBranch ='$branch' WHERE B.userType = '강사' ";
 			$selectQuery = mysqli_query($this->con, $select);
 			
 			while($teacherRow = mysqli_fetch_array($selectQuery))
@@ -2026,6 +2115,49 @@
 			{
 				return 0;
 			}
+
+		}
+
+		function qrCheckIn($userID, $userBranch, $token)
+		{
+			date_default_timezone_set("Asia/Seoul");
+			$checkedTime = date('Y-m-d H:i', time());
+			// if($userBranch == "C1$J2#S3@O4!L5%교대"){
+			// 	$userBranch = substr($userBranch, -2,2);
+			// }
+			if(strlen($userBranch) > 15 && substr($userBranch, 0, 15) == "85C1J2S3O4L5103" )
+			{
+				$userBranch = mb_substr($userBranch, 15);
+				$selectBranch = "SELECT branch FROM BRANCHLIST WHERE branch = '$userBranch' ";//입력으로 받은 지점이 있는건지 확인 
+				$selectBranchQuery = mysqli_query($this->con,$selectBranch);
+				if(mysqli_num_rows($selectBranchQuery) > 0)
+				{
+					$query = "INSERT INTO CHECKIN(userID, userBranch, checkInTime, token) VALUES ('$userID', '$userBranch', '$checkedTime', '$token')";
+					$res = mysqli_query($this->con, $query);
+
+					if(mysqli_affected_rows($this->con) > 0)
+					{
+						echo "success";
+					}else{
+						echo "fail";
+					}
+				}else{
+					echo "fail";
+				}
+
+			}else{
+				echo substr($userBranch, 0, 15)." ";
+				echo $userBranch;
+				echo "fail";
+			}
+			
+			return;
+		}
+
+		function update($data){
+			$query = "UPDATE USER SET userCredit = '$data' WHERE userID = 'test1' ";
+			$res = mysqli_query($this->con, $query);
+			echo $data;
 
 		}
 
